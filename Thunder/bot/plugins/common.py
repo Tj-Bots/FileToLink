@@ -102,12 +102,12 @@ async def start_command(bot: Client, msg: Message):
     btns = [
         [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command"),
          InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command")],
-        [InlineKeyboardButton(MSG_BUTTON_GITHUB, url="https://github.com/fyaz05/FileToLink/"),
+    #    [InlineKeyboardButton(MSG_BUTTON_GITHUB, url="https://github.com/fyaz05/FileToLink/"),
          InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")]
     ]
     
     if link:
-        btns.append([InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link)])
+        btns.insert(0, [InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link)])
     
     try:
         await msg.reply_text(text=txt, reply_markup=InlineKeyboardMarkup(btns))
