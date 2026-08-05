@@ -230,9 +230,9 @@ MSG_LINKS = (
     "> `{file_name}`\n\n"
     "📂 **File Size:** `{file_size}`\n\n"
     "🚀 **Download Link:**\n"
-    "**> `{download_link}`\n\n"
+    "> `{download_link}`\n\n"
     "🖥️ **Stream Link:**\n"
-    "**> `{stream_link}`\n\n"
+    "> `{stream_link}`\n\n"
     "⌛️ **Note: Links remain active while the bot is running and the file is accessible.**"
 )
 
