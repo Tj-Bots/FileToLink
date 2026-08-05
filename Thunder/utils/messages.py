@@ -144,7 +144,7 @@ MSG_WELCOME = (
     "> I generate direct download and streaming links for your files.\n\n"
     "**How to use:**\n"
     "> 1. Send any file to me for private links.\n"
-    "> 2. In groups, reply to a file with `/link`.\n\n"
+    "> 2. In groups, reply to a file with `/link`."
 )
 
 MSG_HELP = (
