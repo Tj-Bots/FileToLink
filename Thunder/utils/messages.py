@@ -145,8 +145,6 @@ MSG_WELCOME = (
     "**How to use:**\n"
     "> 1. Send any file to me for private links.\n"
     "> 2. In groups, reply to a file with `/link`.\n\n"
-    "» Use `/help` for all commands and detailed information.\n\n"
-    "🚀 Send a file to begin!"
 )
 
 MSG_HELP = (
