@@ -257,7 +257,7 @@ MSG_NEW_FILE_REQUEST = (
     "> 🆔 **ID:** `{id_}`\n\n"
     "🚀 **Download:**\n"
     "> {online_link}\n\n"
-    "🖥️ **Stream:**"
+    "🖥️ **Stream:**\n"
     "> {stream_link}"
 )
 
