@@ -96,8 +96,8 @@ async def start_command(bot: Client, msg: Message):
             
     txt = MSG_WELCOME.format(user_name=user.first_name if user else "Unknown")
     link, title = await get_force_info(bot)
-    if link:
-        txt += f"\n\n{MSG_COMMUNITY_CHANNEL.format(channel_title=title)}"
+  #  if link:
+  #      txt += f"\n\n{MSG_COMMUNITY_CHANNEL.format(channel_title=title)}"
     
     btns = [
         [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command"),
