@@ -9,15 +9,19 @@
     --smoke: #16161f;
 
     /* Accents */
-    --ember: #ff5533;
-    --ember-glow: rgba(255, 85, 51, 0.5);
-    --ember-dim: rgba(255, 85, 51, 0.1);
+    --ember: #3b82f6;
+    --ember-glow: rgba(59, 130, 246, 0.5);
+    --ember-dim: rgba(59, 130, 246, 0.1);
 
-    --sage: #7dd3c0;
+    --sage: #60a5fa;
     --pearl: #ebeef2;
     --mist: rgba(235, 238, 242, 0.7);
     --ghost: rgba(235, 238, 242, 0.4);
     --whisper: rgba(235, 238, 242, 0.08);
+
+    /* Error/failure state — kept distinct from the brand accent on purpose */
+    --error: #ff5533;
+    --error-glow: rgba(255, 85, 51, 0.5);
 
     /* Glass Properties — Ultra Premium */
     --glass-bg: rgba(20, 20, 28, 0.6);
@@ -25,11 +29,6 @@
     --glass-highlight: rgba(255, 255, 255, 0.12);
     --glass-blur: 24px;
     --glass-saturate: 180%;
-
-    /* Telegram Channel Accent */
-    --telegram: #2AABEE;
-    --telegram-glow: rgba(42, 171, 238, 0.5);
-    --telegram-dim: rgba(42, 171, 238, 0.12);
 
     /* Noise opacity */
     --noise-opacity: 0.4;
@@ -64,11 +63,14 @@
     --smoke: #ddd9d2;
 
     /* Accents — Richer for contrast */
-    --ember: #d63920;
-    --ember-glow: rgba(214, 57, 32, 0.3);
-    --ember-dim: rgba(214, 57, 32, 0.06);
+    --ember: #1d4ed8;
+    --ember-glow: rgba(29, 78, 216, 0.3);
+    --ember-dim: rgba(29, 78, 216, 0.06);
 
-    --sage: #1a8a7d;
+    --error: #d63920;
+    --error-glow: rgba(214, 57, 32, 0.3);
+
+    --sage: #2563eb;
     --pearl: #1a1a22;
     --mist: rgba(26, 26, 34, 0.8);
     --ghost: rgba(26, 26, 34, 0.5);
@@ -91,9 +93,9 @@
 /* Light theme gradient mesh override */
 [data-theme="light"] .gradient-mesh {
     background:
-        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(214, 57, 32, 0.08) 0%, transparent 50%),
-        radial-gradient(ellipse 60% 80% at 80% 20%, rgba(26, 138, 125, 0.06) 0%, transparent 50%),
-        radial-gradient(ellipse 50% 60% at 60% 80%, rgba(214, 57, 32, 0.04) 0%, transparent 50%);
+        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(29, 78, 216, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 80% at 80% 20%, rgba(37, 99, 235, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 60% at 60% 80%, rgba(29, 78, 216, 0.04) 0%, transparent 50%);
 }
 
 /* Light theme vignette — subtle inward shadow */
@@ -120,7 +122,7 @@
 
 /* Light theme primary button */
 [data-theme="light"] .cmd-btn.primary {
-    background: linear-gradient(135deg, var(--ember) 0%, #c43018 100%);
+    background: linear-gradient(135deg, var(--ember) 0%, #1e40af 100%);
     color: #fff;
     box-shadow:
         0 4px 15px -4px var(--ember-glow),
@@ -240,9 +242,9 @@ body {
     position: absolute;
     inset: -50%;
     background:
-        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(255, 85, 51, 0.06) 0%, transparent 50%),
-        radial-gradient(ellipse 60% 80% at 80% 20%, rgba(125, 211, 192, 0.04) 0%, transparent 50%),
-        radial-gradient(ellipse 50% 60% at 60% 80%, rgba(255, 85, 51, 0.03) 0%, transparent 50%);
+        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 80% at 80% 20%, rgba(96, 165, 250, 0.04) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 60% at 60% 80%, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
     animation: meshFloat 40s ease-in-out infinite;
     filter: blur(60px);
     will-change: transform;
@@ -393,12 +395,12 @@ body {
 }
 
 .meta-tag.loaded {
-    background: rgba(125, 211, 192, 0.06);
-    border-color: rgba(125, 211, 192, 0.4);
+    background: rgba(96, 165, 250, 0.06);
+    border-color: rgba(96, 165, 250, 0.4);
     color: var(--pearl);
     box-shadow:
         0 4px 12px -3px rgba(0, 0, 0, 0.3),
-        0 0 15px -5px rgba(125, 211, 192, 0.2);
+        0 0 15px -5px rgba(96, 165, 250, 0.2);
     animation: metaPopIn 0.5s var(--ease-out-back) forwards;
 }
 
@@ -417,7 +419,7 @@ body {
 .meta-tag.loaded svg {
     color: var(--sage);
     opacity: 1;
-    filter: drop-shadow(0 0 8px rgba(125, 211, 192, 0.5));
+    filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.5));
 }
 
 /* Light theme meta tags */
@@ -428,12 +430,12 @@ body {
 }
 
 [data-theme="light"] .meta-tag.loaded {
-    background: rgba(26, 138, 125, 0.08);
-    border-color: rgba(26, 138, 125, 0.3);
+    background: rgba(37, 99, 235, 0.08);
+    border-color: rgba(37, 99, 235, 0.3);
     color: var(--pearl);
     box-shadow:
         0 4px 12px -3px rgba(0, 0, 0, 0.08),
-        0 0 10px -4px rgba(26, 138, 125, 0.2);
+        0 0 10px -4px rgba(37, 99, 235, 0.2);
 }
 
 [data-theme="light"] .meta-tag.loaded svg {
@@ -443,27 +445,27 @@ body {
 /* Telegram Channel Chip */
 .meta-tag.channel-link {
     cursor: pointer;
-    background: var(--telegram-dim);
-    border-color: rgba(42, 171, 238, 0.35);
+    background: var(--ember-dim);
+    border-color: rgba(59, 130, 246, 0.35);
     color: var(--pearl);
 }
 
 .meta-tag.channel-link svg {
-    color: var(--telegram);
+    color: var(--ember);
     opacity: 1;
-    filter: drop-shadow(0 0 8px var(--telegram-glow));
+    filter: drop-shadow(0 0 8px var(--ember-glow));
 }
 
 .meta-tag.channel-link:hover {
-    border-color: var(--telegram);
+    border-color: var(--ember);
     box-shadow:
         0 4px 14px -3px rgba(0, 0, 0, 0.35),
-        0 0 16px -4px var(--telegram-glow);
+        0 0 16px -4px var(--ember-glow);
 }
 
 [data-theme="light"] .meta-tag.channel-link {
-    background: rgba(42, 171, 238, 0.1);
-    border-color: rgba(42, 171, 238, 0.3);
+    background: var(--ember-dim);
+    border-color: rgba(29, 78, 216, 0.3);
     color: var(--pearl);
 }
 
@@ -575,7 +577,7 @@ media-google-cast-button {
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(160deg, rgba(255, 255, 255, 0.15) 0%, transparent 40%, transparent 60%, rgba(255, 85, 51, 0.1) 100%);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.15) 0%, transparent 40%, transparent 60%, rgba(59, 130, 246, 0.1) 100%);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -730,7 +732,7 @@ media-player [part="container"] {
 }
 
 .cmd-btn.primary {
-    background: linear-gradient(135deg, var(--ember) 0%, #e84422 100%);
+    background: linear-gradient(135deg, var(--ember) 0%, #1d4ed8 100%);
     color: #fff;
     font-weight: 600;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -741,7 +743,7 @@ media-player [part="container"] {
 }
 
 .cmd-btn.primary:hover {
-    background: linear-gradient(135deg, #ff6644 0%, var(--ember) 100%);
+    background: linear-gradient(135deg, #60a5fa 0%, var(--ember) 100%);
     box-shadow:
         0 6px 30px -5px var(--ember-glow),
         inset 0 1px 0 rgba(255, 255, 255, 0.3);
@@ -869,14 +871,14 @@ media-player [part="container"] {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, transparent 0%, rgba(255, 85, 51, 0.05) 100%);
+    background: linear-gradient(135deg, transparent 0%, rgba(59, 130, 246, 0.05) 100%);
     opacity: 0;
     transition: opacity 0.25s ease;
 }
 
 .player-link:hover {
     background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 85, 51, 0.4);
+    border-color: rgba(59, 130, 246, 0.4);
     color: var(--pearl);
     transform: translateY(-2px);
     box-shadow:
@@ -962,11 +964,11 @@ media-player [part="container"] {
 }
 
 .footer-link.channel-link:hover {
-    color: var(--telegram);
+    color: var(--ember);
 }
 
 .footer-link.channel-link:hover svg {
-    filter: drop-shadow(0 0 6px var(--telegram-glow));
+    filter: drop-shadow(0 0 6px var(--ember-glow));
 }
 
 /* ══════════════════════════════════════════
@@ -1050,7 +1052,7 @@ media-player [part="container"] {
 }
 
 .toast.success {
-    border-color: rgba(125, 211, 192, 0.3);
+    border-color: rgba(96, 165, 250, 0.3);
 }
 
 .toast.success::before {
@@ -1070,9 +1072,9 @@ media-player [part="container"] {
     content: '';
     width: 8px;
     height: 8px;
-    background: var(--ember);
+    background: var(--error);
     border-radius: 50%;
-    box-shadow: 0 0 12px var(--ember-glow);
+    box-shadow: 0 0 12px var(--error-glow);
 }
 
 @keyframes toastEnter {
