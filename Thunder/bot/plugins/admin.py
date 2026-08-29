@@ -23,7 +23,7 @@ from Thunder.utils.database import db
 from Thunder.utils.human_readable import humanbytes
 from Thunder.utils.logger import LOG_FILE, logger
 from Thunder.utils.messages import (
-    MSG_ADMIN_AUTH_LIST_HEADER, MSG_ADMIN_NO_BAN_REASON,
+    MSG_ADMIN_AUTH_LIST_HEADER, MSG_ADMIN_HELP, MSG_ADMIN_NO_BAN_REASON,
     MSG_ADMIN_USER_BANNED, MSG_ADMIN_USER_UNBANNED, MSG_AUTHORIZE_FAILED,
     MSG_AUTHORIZE_SUCCESS, MSG_AUTHORIZE_USAGE, MSG_AUTH_USER_INFO,
     MSG_BAN_REASON_SUFFIX, MSG_BAN_USAGE, MSG_BROADCAST_USAGE,
@@ -61,6 +61,15 @@ _MARKDOWN_ESCAPE_TRANS = str.maketrans({
 
 def _escape_markdown(text: str) -> str:
     return text.translate(_MARKDOWN_ESCAPE_TRANS)
+
+
+@StreamBot.on_message(filters.command("admin") & owner_filter)
+async def admin_help_command(client: Client, message: Message):
+    await reply(message,
+                text=MSG_ADMIN_HELP,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)]]))
 
 
 @StreamBot.on_message(filters.command("users") & owner_filter)

@@ -110,6 +110,23 @@ MSG_SHELL_NO_OUTPUT = "✅ <b>Command Executed:</b> No output."
 
 # ------ Admin View & Control ------
 
+MSG_ADMIN_HELP = (
+    "👮 **Admin Commands** 👮\n\n"
+    "> `/users` 📊 - Show the total registered user count.\n"
+    "> `/broadcast [authorized|regular] [-f]` 📣 - Broadcast the replied message to users.\n"
+    "> `/status` 📈 - Show bot uptime & workload status.\n"
+    "> `/stats` 💻 - Show system resource usage (CPU/RAM/disk/network).\n"
+    "> `/restart` ♻️ - Restart the bot.\n"
+    "> `/log` 📄 - Send the current log file.\n"
+    "> `/authorize <user_id>` 🔑 - Grant a user unlimited access.\n"
+    "> `/deauthorize <user_id>` 🔒 - Revoke a user's authorized access.\n"
+    "> `/listauth` 🔐 - List all authorized users.\n"
+    "> `/ban <user_id/channel_id> [reason]` 🚫 - Ban a user or channel.\n"
+    "> `/unban <user_id/channel_id>` ✅ - Unban a user or channel.\n"
+    "> `/shell <command>` ⚙️ - Execute a shell command.\n"
+    "> `/speedtest` 🌐 - Run a server speedtest."
+)
+
 MSG_WORKLOAD_ITEM = "   {bot_name}: {load}\n"
 MSG_ADMIN_RESTART_DONE = "✅ **Restart Successful!**"
 MSG_RESTARTING = "♻️ **Updating and Restarting Bot...**\n\n> ⏳ Please wait a moment."
@@ -150,10 +167,21 @@ MSG_WELCOME = (
 
 MSG_HELP = (
     "📘 **Thunder Bot - Help Guide** 📖\n\n"
-    "**🚀 Private Chat:** Send me any file (document, video, audio, photo, etc.) and I'll instantly reply with download & streaming links.\n\n"
-    "**👥 Groups:** Reply to a file with `/link`, or `/link <number>` to batch up to {max_files} files at once. I need admin rights to work in the group.\n\n"
-    "**⚙️ Commands:** `/start` `/help` `/link` `/about` `/ping` `/dc`\n\n"
-    "💡 Forwarded files work too. If `/link` doesn't reply privately in a group, start a private chat with me first."
+    "**🚀 Private Chat (with me):**\n"
+    "> 1. Send me **any file** (document, video, audio, photo, etc.).\n"
+    "> 2. I'll instantly reply with your links! ⚡\n\n"
+    "**👥 Using in Groups:**\n"
+    "> • Reply to any file with `/link`.\n"
+    "> • **Batch Mode:** Reply to the **first** file with `/link <number>` (e.g., `/link 5` for 5 files, up to {max_files}).\n"
+    "> • Bot needs administrator rights in the group to function.\n\n"
+    "**⚙️ Available Commands:**\n"
+    "> `/start` 👋 - Welcome message & quick start information.\n"
+    "> `/help` 📖 - Shows this help message.\n"
+    "> `/link <num>` 🔗 - (Groups) Generate links.\n"
+    "> `/about` ℹ️ - Learn more about me and my features.\n"
+    "> `/ping` 📡 - Check my responsiveness and online status.\n"
+    "> `/dc` 🌍 - View DC information (for yourself, another user, or a file).\n\n"
+    "💡 You can forward files from other chats directly to me."
 )
 
 MSG_ABOUT = (

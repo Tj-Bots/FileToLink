@@ -104,7 +104,8 @@ async def about_callback(client: Client, callback_query: CallbackQuery):
         await callback_query.answer()
         buttons = [
             [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command", style=ButtonStyle.PRIMARY)],
-            [InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)]
+            [InlineKeyboardButton(MSG_BUTTON_BACK, callback_data="back_to_start", style=ButtonStyle.PRIMARY),
+             InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)]
         ]
       
         try:
