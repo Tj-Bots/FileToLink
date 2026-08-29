@@ -9,8 +9,8 @@
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#030304">
 
     <!-- Logo & Favicon -->
-    <link rel="icon" type="image/jpeg" href="https://cdn.jsdelivr.net/gh/fyaz05/Resources@main/FileToLink/logo.png">
-    <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/fyaz05/Resources@main/FileToLink/logo.png">
+    <link rel="icon" type="image/jpeg" href="https://cdn.jsdelivr.net/gh/Tj-Bots/FileToLink@main/Thunder/assets/logo.png">
+    <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/Tj-Bots/FileToLink@main/Thunder/assets/logo.png">
 
     <!-- SEO & Social Sharing (Open Graph) -->
     <meta name="description"
@@ -19,13 +19,13 @@
     <meta property="og:title" content="{{ file_name }} — Cinema">
     <meta property="og:description"
         content="Stream '{{ file_name }}' in a beautiful, atmospheric environment with professional playback controls.">
-    <meta property="og:image" content="https://cdn.jsdelivr.net/gh/fyaz05/Resources@main/FileToLink/logo.png">
+    <meta property="og:image" content="https://cdn.jsdelivr.net/gh/Tj-Bots/FileToLink@main/Thunder/assets/logo.png">
 
     <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ file_name }} — Cinema">
     <meta name="twitter:description" content="Stream '{{ file_name }}' in a beautiful, atmospheric environment.">
-    <meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/fyaz05/Resources@main/FileToLink/logo.png">
+    <meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/Tj-Bots/FileToLink@main/Thunder/assets/logo.png">
 
     <!-- Vidstack Player -->
     <link rel="stylesheet" href="https://cdn.vidstack.io/player/theme.css" />
@@ -44,29 +44,9 @@
             rel="stylesheet">
     </noscript>
 
-    <!-- Styles (CDN-hosted) -->
+    <!-- Styles (self-hosted via jsDelivr GitHub CDN) -->
     <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/gh/fyaz05/Resources@main/FileToLink/Obsidian%20Ember/styles.css">
-
-    <!-- Channel branding overrides -->
-    <style>
-        .meta-tag.channel-link,
-        .footer-link.channel-link {
-            text-decoration: none;
-            transition: color .2s ease, transform .2s ease;
-        }
-
-        .meta-tag.channel-link svg,
-        .footer-link.channel-link svg {
-            fill: #29b6f6;
-        }
-
-        .meta-tag.channel-link:hover,
-        .footer-link.channel-link:hover {
-            color: #29b6f6;
-            transform: translateY(-1px);
-        }
-    </style>
+        href="https://cdn.jsdelivr.net/gh/Tj-Bots/FileToLink@main/Thunder/assets/obsidian-ember/styles.css">
 </head>
 
 <body>
@@ -370,7 +350,7 @@
                     @TJ_Bots
                 </a>
                 <span class="footer-separator">•</span>
-                <a href="https://github.com/fyaz05/FileToLink" target="_blank" rel="noopener noreferrer"
+                <a href="https://github.com/Tj-Bots/FileToLink" target="_blank" rel="noopener noreferrer"
                     class="footer-link" aria-label="GitHub">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                         <path fill="currentColor"
@@ -390,7 +370,7 @@
         window.__CINEMA_CONFIG__ = { src: {{ src | tojson }} };
     </script>
     <!-- Main Script (CDN-hosted) -->
-    <script src="https://cdn.jsdelivr.net/gh/fyaz05/Resources@main/FileToLink/Obsidian%20Ember/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Tj-Bots/FileToLink@main/Thunder/assets/obsidian-ember/script.js"></script>
 </body>
 
 </html>
