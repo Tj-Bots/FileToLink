@@ -8,14 +8,15 @@ from pyrogram.types import (CallbackQuery, InlineKeyboardButton,
                             InlineKeyboardMarkup)
 
 from Thunder.bot import StreamBot
+from Thunder.utils.bot_utils import build_welcome
 from Thunder.utils.broadcast import broadcast_ids
 from Thunder.utils.decorators import owner_only
 from Thunder.utils.logger import logger
 from Thunder.utils.messages import (
-    MSG_ABOUT, MSG_BROADCAST_CANCEL, MSG_BUTTON_ABOUT, MSG_BUTTON_CLOSE,
-    MSG_BUTTON_GET_HELP, MSG_BUTTON_GITHUB, MSG_BUTTON_JOIN_CHANNEL,
-    MSG_ERROR_BROADCAST_INSTRUCTION, MSG_ERROR_BROADCAST_RESTART,
-    MSG_ERROR_CALLBACK_UNSUPPORTED, MSG_HELP
+    MSG_ABOUT, MSG_BROADCAST_CANCEL, MSG_BUTTON_ABOUT, MSG_BUTTON_BACK,
+    MSG_BUTTON_CLOSE, MSG_BUTTON_GET_HELP,
+    MSG_BUTTON_JOIN_CHANNEL, MSG_ERROR_BROADCAST_INSTRUCTION,
+    MSG_ERROR_BROADCAST_RESTART, MSG_ERROR_CALLBACK_UNSUPPORTED, MSG_HELP
 )
 from Thunder.vars import Var
 
@@ -39,6 +40,27 @@ async def get_force_channel_button(client: Client):
         logger.error(f"Error getting force channel button: {e}", exc_info=True)
     return None
 
+@StreamBot.on_callback_query(filters.regex(r"^back_to_start$"))
+async def back_to_start_callback(client: Client, callback_query: CallbackQuery):
+    try:
+        await callback_query.answer()
+        user = callback_query.from_user
+        txt, markup = await build_welcome(client, user.first_name if user else "Unknown")
+        try:
+            await callback_query.message.edit_text(text=txt, reply_markup=markup)
+        except FloodWait as e:
+            await asyncio.sleep(e.value)
+            await callback_query.message.edit_text(text=txt, reply_markup=markup)
+    except MessageNotModified:
+        pass
+    except Exception as e:
+        logger.error(f"Error in back to start callback: {e}", exc_info=True)
+        try:
+            await callback_query.answer("An error occurred. Please try again.", show_alert=True)
+        except FloodWait as e:
+            await asyncio.sleep(e.value)
+            await callback_query.answer("An error occurred. Please try again.", show_alert=True)
+
 @StreamBot.on_callback_query(filters.regex(r"^help_command$"))
 async def help_callback(client: Client, callback_query: CallbackQuery):
     try:
@@ -47,7 +69,10 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
         force_button = await get_force_channel_button(client)
         if force_button:
             buttons.append(force_button)
-        buttons.append([InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")])
+        buttons.append([
+            InlineKeyboardButton(MSG_BUTTON_BACK, callback_data="back_to_start"),
+            InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")
+        ])
         try:
             await callback_query.message.edit_text(
                 text=MSG_HELP.format(max_files=Var.MAX_BATCH_FILES),

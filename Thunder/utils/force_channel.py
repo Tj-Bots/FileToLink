@@ -62,7 +62,8 @@ async def force_channel_check(client: Client, message: Message):
                     MSG_COMMUNITY_CHANNEL.format(channel_title=title),
                     reply_markup=InlineKeyboardMarkup([[
                         InlineKeyboardButton("Join", url=link)
-                    ]])
+                    ]]),
+                    quote=True
                 )
             except FloodWait as e:
                 await asyncio.sleep(e.value)
@@ -70,20 +71,21 @@ async def force_channel_check(client: Client, message: Message):
                     MSG_COMMUNITY_CHANNEL.format(channel_title=title),
                     reply_markup=InlineKeyboardMarkup([[
                         InlineKeyboardButton("Join", url=link)
-                    ]])
+                    ]]),
+                    quote=True
                 )
         else:
             try:
-                await message.reply_text("You must join the channel to use this bot.")
+                await message.reply_text("You must join the channel to use this bot.", quote=True)
             except FloodWait as e:
                 await asyncio.sleep(e.value)
-                await message.reply_text("You must join the channel to use this bot.")
+                await message.reply_text("You must join the channel to use this bot.", quote=True)
         return False
     except Exception as e:
         logger.error(f"Error checking force channel: {e}", exc_info=True)
         try:
-            await message.reply_text("An unexpected error occurred while checking channel membership. Please try again.")
+            await message.reply_text("An unexpected error occurred while checking channel membership. Please try again.", quote=True)
         except FloodWait as e:
             await asyncio.sleep(e.value)
-            await message.reply_text("An unexpected error occurred while checking channel membership. Please try again.")
+            await message.reply_text("An unexpected error occurred while checking channel membership. Please try again.", quote=True)
         return False

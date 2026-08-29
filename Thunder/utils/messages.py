@@ -132,6 +132,7 @@ MSG_BUTTON_JOIN_CHANNEL = "🔊 {channel_title}"
 MSG_BUTTON_GITHUB = "🛠️ GitHub"
 MSG_BUTTON_START_CHAT = "📩 Start Chat"
 MSG_BUTTON_CLOSE = "✖ Close"
+MSG_BUTTON_BACK = "🔙 Back"
 
 
 # =====================================================================================
@@ -149,34 +150,10 @@ MSG_WELCOME = (
 
 MSG_HELP = (
     "📘 **Thunder Bot - Help Guide** 📖\n\n"
-    "How to get direct download & streaming links:\n\n"
-    "**🚀 Private Chat (with me):**\n"
-    "> 1. Send me **any file** (document, video, audio, photo, etc.).\n"
-    "> 2. I'll instantly reply with your links! ⚡\n\n"
-    "**👥 Using in Groups:**\n"
-    "> • Reply to any file with `/link`.\n"
-    "> • **Batch Mode:** Reply to the **first** file with `/link <number>` (e.g., `/link 5` for 5 files, up to {max_files}).\n"
-    "> • Bot needs administrator rights in the group to function.\n"
-    "> • Links are posted in the group & sent to you privately.\n\n"
-    "**📢 Using in Channels:**\n"
-    "> • Add me as an administrator with necessary permissions.\n"
-    "> • I can be configured to auto-detect new media files.\n"
-    "> • Inline stream/download buttons can be added to files automatically.\n"
-    "> • Files from banned channels (owner configuration) are rejected.\n"
-    "> • Auto-posting links if the bot has admin privileges with delete rights.\n\n"
-    "**⚙️ Available Commands:**\n"
-    "> `/start` 👋 - Welcome message & quick start information.\n"
-    "> `/help` 📖 - Shows this help message.\n"
-    "> `/link <num>` 🔗 - (Groups) Generate links. \n"
-    "> `/about` ℹ️ - Learn more about me and my features.\n"
-    "> `/ping` 📡 - Check my responsiveness and online status.\n"
-    "> `/dc` 🌍 - View DC information (for yourself, another user, or a file).\n\n"
-    "**💡 Pro Tips:**\n"
-    "> • You can forward files from other chats directly to me.\n"
-    "> • If you encounter a rate limit message, please wait the specified time. ⏳\n"
-    "> • For `/link` in groups to work reliably (and for private link delivery), ensure you've started a private chat with me first.\n"
-    "> • Processing batch files might take a bit longer. Please be patient. 🐌\n\n"
-    "❓ Questions? Please ask in our support group!"
+    "**🚀 Private Chat:** Send me any file (document, video, audio, photo, etc.) and I'll instantly reply with download & streaming links.\n\n"
+    "**👥 Groups:** Reply to a file with `/link`, or `/link <number>` to batch up to {max_files} files at once. I need admin rights to work in the group.\n\n"
+    "**⚙️ Commands:** `/start` `/help` `/link` `/about` `/ping` `/dc`\n\n"
+    "💡 Forwarded files work too. If `/link` doesn't reply privately in a group, start a private chat with me first."
 )
 
 MSG_ABOUT = (
@@ -286,7 +263,8 @@ MSG_BROADCAST_USAGE = (
     "📣 **Broadcast Command Usage:**\n\n"
     "`/broadcast` - Broadcast to all users\n"
     "`/broadcast authorized` - Broadcast to authorized users only\n"
-    "`/broadcast regular` - Broadcast to regular (non-authorized) users only\n\n"
+    "`/broadcast regular` - Broadcast to regular (non-authorized) users only\n"
+    "`/broadcast -f` - Forward the message instead of copying it (combine with the modes above, e.g. `/broadcast authorized -f`)\n\n"
     "**Note:** Reply to the message you want to broadcast."
 )
 

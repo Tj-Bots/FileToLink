@@ -12,12 +12,32 @@ from pyrogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
 
 from Thunder.utils.database import db
 from Thunder.utils.file_properties import get_fname, get_fsize, get_hash
+from Thunder.utils.force_channel import get_force_info
 from Thunder.utils.human_readable import humanbytes
 from Thunder.utils.logger import logger
-from Thunder.utils.messages import (MSG_BUTTON_GET_HELP, MSG_DC_UNKNOWN,
-                                    MSG_DC_USER_INFO, MSG_NEW_USER)
+from Thunder.utils.messages import (MSG_BUTTON_ABOUT, MSG_BUTTON_CLOSE,
+                                    MSG_BUTTON_GET_HELP,
+                                    MSG_BUTTON_JOIN_CHANNEL, MSG_DC_UNKNOWN,
+                                    MSG_DC_USER_INFO, MSG_NEW_USER,
+                                    MSG_WELCOME)
 from Thunder.utils.shortener import shorten
 from Thunder.vars import Var
+
+
+async def build_welcome(bot: Client, user_name: str):
+    txt = MSG_WELCOME.format(user_name=user_name)
+    link, title = await get_force_info(bot)
+
+    btns = [
+        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command"),
+         InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command")],
+        [InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")]
+    ]
+
+    if link:
+        btns.insert(0, [InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link)])
+
+    return txt, InlineKeyboardMarkup(btns)
 
 
 def quote_media_name(file_name: str) -> str:
@@ -104,14 +124,16 @@ async def reply_user_err(msg: Message, err_txt: str):
         await msg.reply_text(
             text=err_txt,
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command")]]),
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            quote=True
         )
     except FloodWait as e:
         await asyncio.sleep(e.value)
         await msg.reply_text(
             text=err_txt,
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command")]]),
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            quote=True
         )
 
 

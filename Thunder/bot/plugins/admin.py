@@ -80,11 +80,14 @@ async def get_total_users(client: Client, message: Message):
 @StreamBot.on_message(filters.command("broadcast") & owner_filter)
 async def broadcast_handler(client: Client, message: Message):
     mode = "all"
-    if len(message.command) > 1:
-        arg = message.command[1].lower().strip()
+    forward = False
+    for arg in message.command[1:]:
+        arg = arg.lower().strip()
         if arg in ("help", "--help", "-h"):
             return await reply(message, text=MSG_BROADCAST_USAGE, parse_mode=ParseMode.MARKDOWN)
-        if arg == "authorized":
+        if arg in ("-f", "--forward"):
+            forward = True
+        elif arg == "authorized":
             mode = "authorized"
         elif arg == "regular":
             mode = "regular"
@@ -100,7 +103,7 @@ async def broadcast_handler(client: Client, message: Message):
     if not message.reply_to_message:
         return await reply(message, text=MSG_INVALID_BROADCAST_CMD)
 
-    await broadcast_message(client, message, mode=mode)
+    await broadcast_message(client, message, mode=mode, forward=forward)
 
 
 @StreamBot.on_message(filters.command("status") & owner_filter)

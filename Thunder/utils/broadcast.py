@@ -24,13 +24,13 @@ from Thunder.utils.time_format import get_readable_time
 
 broadcast_ids = {}
 
-async def broadcast_message(client: Client, message: Message, mode: str = "all"):
+async def broadcast_message(client: Client, message: Message, mode: str = "all", forward: bool = False):
     if not message.reply_to_message:
         try:
-            await message.reply_text(MSG_INVALID_BROADCAST_CMD)
+            await message.reply_text(MSG_INVALID_BROADCAST_CMD, quote=True)
         except FloodWait as e:
             await asyncio.sleep(e.value)
-            await message.reply_text(MSG_INVALID_BROADCAST_CMD)
+            await message.reply_text(MSG_INVALID_BROADCAST_CMD, quote=True)
         except Exception as e:
             logger.error(f"Error sending invalid broadcast message: {e}", exc_info=True)
         return
@@ -44,7 +44,8 @@ async def broadcast_message(client: Client, message: Message, mode: str = "all")
             MSG_BROADCAST_START,
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton(MSG_BUTTON_CANCEL_BROADCAST, callback_data=f"cancel_{broadcast_id}")
-            ]])
+            ]]),
+            quote=True
         )
     except FloodWait as e:
         await asyncio.sleep(e.value)
@@ -52,7 +53,8 @@ async def broadcast_message(client: Client, message: Message, mode: str = "all")
             MSG_BROADCAST_START,
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton(MSG_BUTTON_CANCEL_BROADCAST, callback_data=f"cancel_{broadcast_id}")
-            ]])
+            ]]),
+            quote=True
         )
     except Exception as e:
         logger.error(f"Error starting broadcast: {e}", exc_info=True)
@@ -102,7 +104,10 @@ async def broadcast_message(client: Client, message: Message, mode: str = "all")
                 success = False
                 for attempt in range(3):
                     try:
-                        await message.reply_to_message.copy(user_id)
+                        if forward:
+                            await message.reply_to_message.forward(user_id)
+                        else:
+                            await message.reply_to_message.copy(user_id)
                         stats["success"] += 1
                         success = True
                         break
@@ -173,11 +178,11 @@ async def broadcast_message(client: Client, message: Message, mode: str = "all")
             completion_msg = "🛑 **Broadcast Cancelled**\n\n" + completion_msg
         
         try:
-            await message.reply_text(completion_msg, parse_mode=ParseMode.MARKDOWN)
+            await message.reply_text(completion_msg, parse_mode=ParseMode.MARKDOWN, quote=True)
         except FloodWait as e:
             await asyncio.sleep(e.value)
             try:
-                await message.reply_text(completion_msg, parse_mode=ParseMode.MARKDOWN)
+                await message.reply_text(completion_msg, parse_mode=ParseMode.MARKDOWN, quote=True)
             except Exception as e:
                 logger.error(f"Failed to send completion message after FloodWait: {e}", exc_info=True)
         except Exception as e:
