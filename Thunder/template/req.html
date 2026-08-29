@@ -47,6 +47,26 @@
     <!-- Styles (CDN-hosted) -->
     <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/gh/fyaz05/Resources@main/FileToLink/Obsidian%20Ember/styles.css">
+
+    <!-- Channel branding overrides -->
+    <style>
+        .meta-tag.channel-link,
+        .footer-link.channel-link {
+            text-decoration: none;
+            transition: color .2s ease, transform .2s ease;
+        }
+
+        .meta-tag.channel-link svg,
+        .footer-link.channel-link svg {
+            fill: #29b6f6;
+        }
+
+        .meta-tag.channel-link:hover,
+        .footer-link.channel-link:hover {
+            color: #29b6f6;
+            transform: translateY(-1px);
+        }
+    </style>
 </head>
 
 <body>
@@ -78,6 +98,14 @@
                         </svg>
                         <span>Loading...</span>
                     </span>
+                    <a class="meta-tag channel-link" href="https://t.me/TJ_Bots" target="_blank"
+                        rel="noopener noreferrer" aria-label="Join our Telegram channel">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.14-3.05-2 1.94c-.24.24-.44.44-.9.44z" />
+                        </svg>
+                        <span>@TJ_Bots</span>
+                    </a>
                 </div>
             </div>
             <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
@@ -332,6 +360,15 @@
             <!-- Copyright -->
             <div class="copyright-footer">
                 <span>&copy; <span id="copyrightYear"></span> Thunder</span>
+                <span class="footer-separator">•</span>
+                <a href="https://t.me/TJ_Bots" target="_blank" rel="noopener noreferrer"
+                    class="footer-link channel-link" aria-label="Telegram Channel">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.14-3.05-2 1.94c-.24.24-.44.44-.9.44z" />
+                    </svg>
+                    @TJ_Bots
+                </a>
                 <span class="footer-separator">•</span>
                 <a href="https://github.com/fyaz05/FileToLink" target="_blank" rel="noopener noreferrer"
                     class="footer-link" aria-label="GitHub">
