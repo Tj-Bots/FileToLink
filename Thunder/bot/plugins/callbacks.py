@@ -3,6 +3,7 @@
 import asyncio
 
 from pyrogram import Client, filters
+from pyrogram.enums import ButtonStyle
 from pyrogram.errors import FloodWait, MessageNotModified, MessageDeleteForbidden
 from pyrogram.types import (CallbackQuery, InlineKeyboardButton,
                             InlineKeyboardMarkup)
@@ -34,7 +35,8 @@ async def get_force_channel_button(client: Client):
             if invite_link:
                 return [InlineKeyboardButton(
                     MSG_BUTTON_JOIN_CHANNEL.format(channel_title=chat.title or "Channel"),
-                    url=invite_link
+                    url=invite_link,
+                    style=ButtonStyle.SUCCESS
                 )]
     except Exception as e:
         logger.error(f"Error getting force channel button: {e}", exc_info=True)
@@ -65,13 +67,13 @@ async def back_to_start_callback(client: Client, callback_query: CallbackQuery):
 async def help_callback(client: Client, callback_query: CallbackQuery):
     try:
         await callback_query.answer()
-        buttons = [[InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command")]]
+        buttons = [[InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command", style=ButtonStyle.PRIMARY)]]
         force_button = await get_force_channel_button(client)
         if force_button:
             buttons.append(force_button)
         buttons.append([
-            InlineKeyboardButton(MSG_BUTTON_BACK, callback_data="back_to_start"),
-            InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")
+            InlineKeyboardButton(MSG_BUTTON_BACK, callback_data="back_to_start", style=ButtonStyle.PRIMARY),
+            InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)
         ])
         try:
             await callback_query.message.edit_text(
@@ -101,11 +103,8 @@ async def about_callback(client: Client, callback_query: CallbackQuery):
     try:
         await callback_query.answer()
         buttons = [
-            [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command")],
-            [
-                # InlineKeyboardButton(MSG_BUTTON_GITHUB, url="https://github.com/fyaz05/FileToLink"),
-                InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")
-            ]
+            [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command", style=ButtonStyle.PRIMARY)],
+            [InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)]
         ]
       
         try:
@@ -143,8 +142,8 @@ async def restart_broadcast_callback(client: Client, callback_query: CallbackQue
             await callback_query.answer(MSG_ERROR_BROADCAST_RESTART, show_alert=True)
         buttons = [
             [
-                InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command"),
-                InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")
+                InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command", style=ButtonStyle.PRIMARY),
+                InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)
             ]
         ]
         try:

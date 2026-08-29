@@ -58,8 +58,8 @@ async def fwd_media(m_msg: Message) -> Optional[Message]:
 
 def get_link_buttons(links):
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton(MSG_BUTTON_STREAM_NOW, url=links['stream_link']),
-        InlineKeyboardButton(MSG_BUTTON_DOWNLOAD, url=links['online_link'])
+        InlineKeyboardButton(MSG_BUTTON_STREAM_NOW, url=links['stream_link'], style=enums.ButtonStyle.SUCCESS),
+        InlineKeyboardButton(MSG_BUTTON_DOWNLOAD, url=links['online_link'], style=enums.ButtonStyle.SUCCESS)
     ]])
 
 async def validate_request_common(client: Client, message: Message) -> Optional[bool]:
@@ -224,7 +224,7 @@ async def link_handler(bot: Client, msg: Message, **kwargs):
                     MSG_ERROR_START_BOT.format(invite_link=invite_link),
                     disable_web_page_preview=True,
                     parse_mode=enums.ParseMode.MARKDOWN,
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(MSG_BUTTON_START_CHAT, url=invite_link)]]),
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(MSG_BUTTON_START_CHAT, url=invite_link, style=enums.ButtonStyle.SUCCESS)]]),
                     quote=True
                 )
             except FloodWait as e:
@@ -233,7 +233,7 @@ async def link_handler(bot: Client, msg: Message, **kwargs):
                     MSG_ERROR_START_BOT.format(invite_link=invite_link),
                     disable_web_page_preview=True,
                     parse_mode=enums.ParseMode.MARKDOWN,
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(MSG_BUTTON_START_CHAT, url=invite_link)]]),
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(MSG_BUTTON_START_CHAT, url=invite_link, style=enums.ButtonStyle.SUCCESS)]]),
                     quote=True
                 )
             return

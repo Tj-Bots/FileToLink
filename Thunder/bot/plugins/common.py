@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timedelta
 
 from pyrogram import Client, filters
+from pyrogram.enums import ButtonStyle
 from pyrogram.errors import FloodWait, MessageNotModified
 from pyrogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
                             Message, User)
@@ -109,15 +110,15 @@ async def help_command(bot: Client, msg: Message):
         await log_newusr(bot, msg.from_user.id, msg.from_user.first_name)
 
     txt = MSG_HELP.format(max_files=Var.MAX_BATCH_FILES)
-    btns = [[InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command")]]
+    btns = [[InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command", style=ButtonStyle.PRIMARY)]]
 
     link, title = await get_force_info(bot)
     if link:
-        btns.append([InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link)])
+        btns.append([InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link, style=ButtonStyle.SUCCESS)])
 
     btns.append([
-        InlineKeyboardButton(MSG_BUTTON_BACK, callback_data="back_to_start"),
-        InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")
+        InlineKeyboardButton(MSG_BUTTON_BACK, callback_data="back_to_start", style=ButtonStyle.PRIMARY),
+        InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)
     ])
     try:
         await msg.reply_text(text=txt, reply_markup=InlineKeyboardMarkup(btns), quote=True)
@@ -133,8 +134,8 @@ async def about_command(bot: Client, msg: Message):
         await log_newusr(bot, msg.from_user.id, msg.from_user.first_name)
 
     btns = [
-        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command")],
-        [InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")]
+        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command", style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)]
     ]
 
     try:
@@ -147,8 +148,8 @@ async def send_user_dc(msg: Message, user: User):
     txt = await gen_dc_txt(user)
     url = f"https://t.me/{user.username}" if user.username else f"tg://user?id={user.id}"
     btns = [
-        [InlineKeyboardButton(MSG_BUTTON_VIEW_PROFILE, url=url)],
-        [InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")]
+        [InlineKeyboardButton(MSG_BUTTON_VIEW_PROFILE, url=url, style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)]
     ]
     try:
         await msg.reply_text(text=txt, reply_markup=InlineKeyboardMarkup(btns), quote=True)
@@ -187,7 +188,7 @@ async def send_file_dc(msg: Message, file_msg: Message):
             dc_id=dc_id
         )
         
-        btns = [[InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")]]
+        btns = [[InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)]]
         try:
             await msg.reply_text(text=txt, reply_markup=InlineKeyboardMarkup(btns), quote=True)
         except FloodWait as e:
@@ -247,8 +248,8 @@ async def ping_command(bot: Client, msg: Message):
     ms = (end - start) * 1000
     
     btns = [
-        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command"),
-         InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")]
+        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command", style=ButtonStyle.PRIMARY),
+         InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)]
     ]
     
     try:

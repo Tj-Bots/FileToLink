@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 from urllib.parse import quote
 
 from pyrogram import Client
-from pyrogram.enums import ChatMemberStatus
+from pyrogram.enums import ButtonStyle, ChatMemberStatus
 from pyrogram.errors import FloodWait
 from pyrogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
                             Message, User)
@@ -29,13 +29,13 @@ async def build_welcome(bot: Client, user_name: str):
     link, title = await get_force_info(bot)
 
     btns = [
-        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command"),
-         InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command")],
-        [InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")]
+        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command", style=ButtonStyle.PRIMARY),
+         InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command", style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)]
     ]
 
     if link:
-        btns.insert(0, [InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link)])
+        btns.insert(0, [InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link, style=ButtonStyle.SUCCESS)])
 
     return txt, InlineKeyboardMarkup(btns)
 
@@ -123,7 +123,7 @@ async def reply_user_err(msg: Message, err_txt: str):
     try:
         await msg.reply_text(
             text=err_txt,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command")]]),
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command", style=ButtonStyle.PRIMARY)]]),
             disable_web_page_preview=True,
             quote=True
         )
@@ -131,7 +131,7 @@ async def reply_user_err(msg: Message, err_txt: str):
         await asyncio.sleep(e.value)
         await msg.reply_text(
             text=err_txt,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command")]]),
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command", style=ButtonStyle.PRIMARY)]]),
             disable_web_page_preview=True,
             quote=True
         )

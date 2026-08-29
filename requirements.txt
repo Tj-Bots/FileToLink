@@ -1,7 +1,7 @@
 aiohttp
 cloudscraper
 Jinja2
-pyrofork
+pyrotgfork
 pymongo
 psutil
 python-dotenv
