@@ -19,6 +19,7 @@ from Thunder.utils.canonical_files import (
 from Thunder.utils.custom_dl import ByteStreamer
 from Thunder.utils.file_properties import get_media
 from Thunder.utils.logger import logger
+from Thunder.utils.mkv_subtitles import extract_subtitle_vtt, probe_tracks
 from Thunder.utils.render_template import render_media_page, render_page
 from Thunder.utils.time_format import get_readable_time
 from Thunder.vars import Var
@@ -45,6 +46,12 @@ CORS_HEADERS = {
 }
 
 streamers = {}
+
+# In-memory, per-process caches so the (potentially slow, since Matroska has
+# no subtitle-only index) track probe and subtitle extraction only ever run
+# once per file, not once per viewer. Keyed by (secure_hash, media_ref).
+_tracks_cache: dict[tuple, list] = {}
+_subtitle_cache: dict[tuple, str | None] = {}
 
 
 def get_streamer(client_id: int) -> ByteStreamer:
@@ -440,6 +447,178 @@ async def canonical_media_delivery(request: web.Request):
         logger.error(f"Canonical server error {error_id}: {e}", exc_info=True)
         raise web.HTTPInternalServerError(
             text=f"An unexpected server error occurred: {error_id}") from e
+
+
+async def _chunk_source(streamer: ByteStreamer, media_ref, fallback_message_id=None, on_fallback_message=None):
+    async for chunk in streamer.stream_file(
+        media_ref, offset=0, limit=0,
+        fallback_message_id=fallback_message_id,
+        on_fallback_message=on_fallback_message
+    ):
+        yield chunk
+
+
+async def _get_tracks_cached(cache_key, streamer, media_ref, **stream_kwargs):
+    if cache_key in _tracks_cache:
+        return _tracks_cache[cache_key]
+    tracks = await probe_tracks(_chunk_source(streamer, media_ref, **stream_kwargs))
+    _tracks_cache[cache_key] = tracks
+    return tracks
+
+
+async def _get_subtitle_cached(cache_key, streamer, media_ref, track_number, **stream_kwargs):
+    sub_key = (*cache_key, track_number)
+    if sub_key in _subtitle_cache:
+        return _subtitle_cache[sub_key]
+    vtt = await extract_subtitle_vtt(
+        _chunk_source(streamer, media_ref, **stream_kwargs),
+        track_number=track_number,
+    )
+    _subtitle_cache[sub_key] = vtt
+    return vtt
+
+
+def _parse_track_query(request: web.Request) -> int:
+    raw = request.query.get("track", "")
+    try:
+        return int(raw)
+    except ValueError as e:
+        raise web.HTTPBadRequest(text="Invalid or missing 'track' query parameter") from e
+
+
+@routes.get(r"/tracks/f/{secure_hash}/{name:.+}")
+async def canonical_tracks(request: web.Request):
+    try:
+        secure_hash = validate_public_hash(request.match_info["secure_hash"])
+        file_record = await get_file_by_hash(secure_hash, raise_on_error=False)
+        if not file_record:
+            raise FileNotFound("Canonical file not found")
+        _resolve_unique_id(file_record)
+        media_ref = int(file_record["canonical_message_id"])
+
+        client_id, streamer = select_optimal_client()
+        work_loads[client_id] += 1
+        try:
+            tracks = await _get_tracks_cached(
+                ("f", secure_hash), streamer, media_ref, fallback_message_id=media_ref
+            )
+        finally:
+            work_loads[client_id] -= 1
+
+        return web.json_response(
+            {"tracks": tracks}, headers={"Access-Control-Allow-Origin": "*"})
+    except (InvalidHash, FileNotFound) as e:
+        raise web.HTTPNotFound(text="Resource not found") from e
+    except web.HTTPException:
+        raise
+    except Exception as e:
+        error_id = secrets.token_hex(6)
+        logger.error(f"Canonical tracks error {error_id}: {e}", exc_info=True)
+        raise web.HTTPInternalServerError(
+            text=f"Server error occurred: {error_id}") from e
+
+
+@routes.get(r"/subtitle/f/{secure_hash}/{name:.+}")
+async def canonical_subtitle(request: web.Request):
+    try:
+        secure_hash = validate_public_hash(request.match_info["secure_hash"])
+        track_number = _parse_track_query(request)
+        file_record = await get_file_by_hash(secure_hash, raise_on_error=False)
+        if not file_record:
+            raise FileNotFound("Canonical file not found")
+        _resolve_unique_id(file_record)
+        media_ref = int(file_record["canonical_message_id"])
+
+        client_id, streamer = select_optimal_client()
+        work_loads[client_id] += 1
+        try:
+            vtt = await _get_subtitle_cached(
+                ("f", secure_hash), streamer, media_ref, track_number,
+                fallback_message_id=media_ref
+            )
+        finally:
+            work_loads[client_id] -= 1
+
+        if vtt is None:
+            raise FileNotFound("Subtitle track not found or could not be extracted")
+        return web.Response(
+            text=vtt, content_type="text/vtt",
+            headers={"Access-Control-Allow-Origin": "*"})
+    except (InvalidHash, FileNotFound) as e:
+        raise web.HTTPNotFound(text="Resource not found") from e
+    except web.HTTPException:
+        raise
+    except Exception as e:
+        error_id = secrets.token_hex(6)
+        logger.error(f"Canonical subtitle error {error_id}: {e}", exc_info=True)
+        raise web.HTTPInternalServerError(
+            text=f"Server error occurred: {error_id}") from e
+
+
+@routes.get(r"/tracks/{path:.+}")
+async def adhoc_tracks(request: web.Request):
+    try:
+        path = request.match_info["path"]
+        message_id, secure_hash = parse_media_request(path, request.query)
+
+        client_id, streamer = select_optimal_client()
+        work_loads[client_id] += 1
+        try:
+            file_info = await streamer.get_file_info(message_id)
+            unique_id = _resolve_unique_id(file_info)
+            if unique_id[:SECURE_HASH_LENGTH] != secure_hash:
+                raise InvalidHash("Provided hash does not match file's unique ID.")
+            tracks = await _get_tracks_cached(
+                ("adhoc", secure_hash, message_id), streamer, message_id)
+        finally:
+            work_loads[client_id] -= 1
+
+        return web.json_response(
+            {"tracks": tracks}, headers={"Access-Control-Allow-Origin": "*"})
+    except (InvalidHash, FileNotFound) as e:
+        raise web.HTTPNotFound(text="Resource not found") from e
+    except web.HTTPException:
+        raise
+    except Exception as e:
+        error_id = secrets.token_hex(6)
+        logger.error(f"Tracks error {error_id}: {e}", exc_info=True)
+        raise web.HTTPInternalServerError(
+            text=f"Server error occurred: {error_id}") from e
+
+
+@routes.get(r"/subtitle/{path:.+}")
+async def adhoc_subtitle(request: web.Request):
+    try:
+        path = request.match_info["path"]
+        track_number = _parse_track_query(request)
+        message_id, secure_hash = parse_media_request(path, request.query)
+
+        client_id, streamer = select_optimal_client()
+        work_loads[client_id] += 1
+        try:
+            file_info = await streamer.get_file_info(message_id)
+            unique_id = _resolve_unique_id(file_info)
+            if unique_id[:SECURE_HASH_LENGTH] != secure_hash:
+                raise InvalidHash("Provided hash does not match file's unique ID.")
+            vtt = await _get_subtitle_cached(
+                ("adhoc", secure_hash, message_id), streamer, message_id, track_number)
+        finally:
+            work_loads[client_id] -= 1
+
+        if vtt is None:
+            raise FileNotFound("Subtitle track not found or could not be extracted")
+        return web.Response(
+            text=vtt, content_type="text/vtt",
+            headers={"Access-Control-Allow-Origin": "*"})
+    except (InvalidHash, FileNotFound) as e:
+        raise web.HTTPNotFound(text="Resource not found") from e
+    except web.HTTPException:
+        raise
+    except Exception as e:
+        error_id = secrets.token_hex(6)
+        logger.error(f"Subtitle error {error_id}: {e}", exc_info=True)
+        raise web.HTTPInternalServerError(
+            text=f"Server error occurred: {error_id}") from e
 
 
 @routes.get(r"/{path:.+}", allow_head=True)
