@@ -3,10 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{{ heading }}</title>
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf9f7">
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#030304">
+    <meta name="theme-color" content="#030304">
 
     <!-- Logo & Favicon -->
     <link rel="icon" type="image/jpeg" href="https://cdn.jsdelivr.net/gh/Tj-Bots/FileToLink@f91cfdb5a75b4a1a732c3fdc5215383d9760b39e/Thunder/assets/logo.png">
@@ -14,33 +13,29 @@
 
     <!-- SEO & Social Sharing (Open Graph) -->
     <meta name="description"
-        content="A premium cinema experience for '{{ file_name }}'. Stream in high quality with advanced controls.">
+        content="Stream '{{ file_name }}' with a clean, full-screen player.">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="{{ file_name }} — Cinema">
-    <meta property="og:description"
-        content="Stream '{{ file_name }}' in a beautiful, atmospheric environment with professional playback controls.">
+    <meta property="og:title" content="{{ file_name }}">
+    <meta property="og:description" content="Stream '{{ file_name }}'.">
     <meta property="og:image" content="https://cdn.jsdelivr.net/gh/Tj-Bots/FileToLink@f91cfdb5a75b4a1a732c3fdc5215383d9760b39e/Thunder/assets/logo.png">
 
     <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ file_name }} — Cinema">
-    <meta name="twitter:description" content="Stream '{{ file_name }}' in a beautiful, atmospheric environment.">
+    <meta name="twitter:title" content="{{ file_name }}">
     <meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/Tj-Bots/FileToLink@f91cfdb5a75b4a1a732c3fdc5215383d9760b39e/Thunder/assets/logo.png">
 
-    <!-- Vidstack Player -->
-    <link rel="stylesheet" href="https://cdn.vidstack.io/player/theme.css" />
-    <link rel="stylesheet" href="https://cdn.vidstack.io/player/video.css" />
+    <!-- Vidstack Player (engine only — the UI below is fully custom) -->
     <script type="module" src="https://cdn.vidstack.io/player"></script>
 
-    <!-- Typography: Outfit (geometric display) + DM Sans (refined body) -->
+    <!-- Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap"
         rel="stylesheet" media="print" onload="this.media='all'">
     <noscript>
         <link
-            href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap"
             rel="stylesheet">
     </noscript>
 
@@ -50,326 +45,200 @@
 </head>
 
 <body>
-    <!-- Atmospheric Background -->
-    <div class="atmosphere" aria-hidden="true">
-        <div class="gradient-mesh"></div>
-        <div class="noise"></div>
-        <div class="vignette"></div>
+    <div class="player-stage" id="playerStage">
+        <media-player id="player" title="{{ file_name }}" playsinline keyTarget="document" tabindex="-1">
+            <media-provider></media-provider>
+        </media-player>
+
+        <!-- Tap anywhere to toggle the overlay -->
+        <div class="tap-layer" id="tapLayer"></div>
+
+        <!-- Top overlay: back / title / actions -->
+        <div class="ov-top" id="ovTop">
+            <button class="icon-btn" id="backBtn" aria-label="Back">
+                <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </button>
+            <div class="ov-title" id="ovTitle">{{ file_name }}</div>
+            <div class="ov-actions">
+                <button class="icon-btn" id="shareBtn" aria-label="Share">
+                    <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L7.04 9.81C6.5 9.31 5.79 9 5 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+                </button>
+                <button class="icon-btn" id="pipBtn" aria-label="Picture in picture">
+                    <svg viewBox="0 0 24 24"><path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.98h18v14.03z"/></svg>
+                </button>
+                <a class="icon-btn" id="downloadBtn" href="{{ src|safe }}" download="{{ file_name }}" aria-label="Download">
+                    <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                </a>
+            </div>
+        </div>
+
+        <!-- Center overlay: seek -10 / play-pause / seek +10 -->
+        <div class="ov-center" id="ovCenter">
+            <button class="seek-btn" id="seekBackBtn" aria-label="Seek back 10 seconds">
+                <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+                <span>10</span>
+            </button>
+            <button class="play-btn" id="playBtn" aria-label="Play or pause">
+                <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24" hidden><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                <svg class="icon-spinner" viewBox="0 0 24 24" hidden><circle cx="12" cy="12" r="9" fill="none" stroke-width="2.5"/></svg>
+            </button>
+            <button class="seek-btn" id="seekFwdBtn" aria-label="Seek forward 10 seconds">
+                <svg viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+                <span>10</span>
+            </button>
+        </div>
+
+        <!-- Side sliders: brightness (left) / volume (right) -->
+        <div class="side-slider side-left" id="brightnessWrap">
+            <input type="range" id="brightnessSlider" class="v-range" min="40" max="160" value="100" step="1"
+                aria-label="Brightness" orient="vertical">
+            <svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0a.996.996 0 000-1.41l-1.06-1.06zm1.06-10.96a.996.996 0 000-1.41.996.996 0 00-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36a.996.996 0 000-1.41.996.996 0 00-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>
+        </div>
+        <div class="side-slider side-right" id="volumeWrap">
+            <input type="range" id="volumeSlider" class="v-range" min="0" max="100" value="100" step="1"
+                aria-label="Volume" orient="vertical">
+            <svg id="volumeIcon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.26 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </div>
+
+        <!-- Bottom overlay: seek bar + action row -->
+        <div class="ov-bottom" id="ovBottom">
+            <div class="seek-row">
+                <span class="time-label" id="timeCurrent">0:00</span>
+                <input type="range" id="seekBar" class="seek-range" min="0" max="1000" value="0" step="0.1"
+                    aria-label="Seek">
+                <span class="time-label" id="timeDuration">0:00</span>
+            </div>
+            <div class="action-row">
+                <button class="action-btn" id="speedBtn">
+                    <svg viewBox="0 0 24 24"><path d="M20.38 8.57l-1.23 1.85a8 8 0 01-.22 7.58H5.07A8 8 0 0115.58 6.85l1.85-1.23A10 10 0 003.35 19a2 2 0 001.72 1h13.85a2 2 0 001.74-1 10 10 0 00-.27-10.44zm-9.79 6.84a2 2 0 002.83 0l5.66-8.49-8.49 5.66a2 2 0 000 2.83z"/></svg>
+                    <span id="speedLabel">1x</span>
+                </button>
+                <button class="action-btn" id="sleepBtn">
+                    <svg viewBox="0 0 24 24"><path d="M12 20a7 7 0 100-14 7 7 0 000 14zm0-16a9 9 0 110 18 9 9 0 010-18zm.5 4H11v6l5.2 3.15.8-1.24-4.5-2.7V8z"/></svg>
+                    <span>Sleep</span>
+                </button>
+                <button class="action-btn" id="lockBtn">
+                    <svg viewBox="0 0 24 24"><path d="M12 17a2 2 0 002-2 2 2 0 00-2-2 2 2 0 00-2 2 2 2 0 002 2zm6-9h-1V6a5 5 0 00-10 0v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2zm-6-3.8a2.8 2.8 0 012.8 2.8v2H9.2V6a2.8 2.8 0 012.8-2.8z"/></svg>
+                    <span>Lock</span>
+                </button>
+                <button class="action-btn" id="tracksBtn">
+                    <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6v-2zm0 4h8v2H6v-2zm10 0h2v2h-2v-2zm-6-4h8v2h-8v-2z"/></svg>
+                    <span id="tracksLabel">Captions</span>
+                </button>
+                <button class="action-btn" id="openInBtn">
+                    <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9.5 7.5v9l7-4.5-7-4.5z"/></svg>
+                    <span>Open In</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Background message shown only if the stream fails to start -->
+        <div class="player-background-message" id="bgMessage" hidden>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9.5 7.5v9l7-4.5-7-4.5z"/></svg>
+            <span class="bg-msg-title">If video not playing</span>
+            <span class="bg-msg-sub">Use External Player</span>
+        </div>
+
+        <!-- Lock mode: everything above is pointer-blocked except this -->
+        <button class="unlock-btn" id="unlockBtn" hidden aria-label="Unlock controls">
+            <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/></svg>
+            <span>Tap to unlock</span>
+        </button>
     </div>
 
-    <!-- Main Viewport -->
-    <main class="viewport">
-        <!-- Masthead -->
-        <header class="masthead">
-            <div class="title-group">
-                <h1 class="title">{{ file_name }}</h1>
-                <div class="file-meta" id="fileMeta">
-                    <span class="meta-tag" id="metaDuration">
-                        <svg viewBox="0 0 24 24">
-                            <path
-                                d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
-                        </svg>
-                        <span>Loading...</span>
-                    </span>
-                    <span class="meta-tag" id="metaResolution">
-                        <svg viewBox="0 0 24 24">
-                            <path
-                                d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9 8h2v8H9zm4 0h2v8h-2z" />
-                        </svg>
-                        <span>Loading...</span>
-                    </span>
-                    <a class="meta-tag channel-link" href="https://t.me/TJ_Bots" target="_blank"
-                        rel="noopener noreferrer" aria-label="Join our Telegram channel">
-                        <svg viewBox="0 0 24 24">
-                            <path
-                                d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.14-3.05-2 1.94c-.24.24-.44.44-.9.44z" />
-                        </svg>
-                        <span>@TJ_Bots</span>
-                    </a>
-                </div>
+    <!-- Sheets: speed / sleep timer / tracks / open-in -->
+    <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+
+    <div class="sheet" id="speedSheet" hidden>
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Playback Speed</h3>
+        <div class="sheet-options" id="speedOptions"></div>
+    </div>
+
+    <div class="sheet" id="sleepSheet" hidden>
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Sleep Timer</h3>
+        <div class="sheet-options" id="sleepOptions"></div>
+    </div>
+
+    <div class="sheet" id="tracksSheet" hidden>
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Audio &amp; Subtitles</h3>
+        <div class="sheet-section">
+            <div class="sheet-section-label">Subtitles</div>
+            <div class="sheet-options" id="subtitleOptions">
+                <div class="sheet-empty">No embedded subtitles found.</div>
             </div>
-            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-                <!-- Sun icon (shown in dark mode) -->
-                <svg class="icon-sun" viewBox="0 0 24 24">
-                    <path
-                        d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0a.996.996 0 000-1.41l-1.06-1.06zm1.06-10.96a.996.996 0 000-1.41.996.996 0 00-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36a.996.996 0 000-1.41.996.996 0 00-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z" />
-                </svg>
-                <!-- Moon icon (shown in light mode) -->
-                <svg class="icon-moon" viewBox="0 0 24 24">
-                    <path
-                        d="M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 01-4.4 2.26 5.403 5.403 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z" />
-                </svg>
-            </button>
-        </header>
-
-        <!-- Cinema Screen -->
-        <section class="cinema">
-            <div class="screen">
-                <div class="player-background-message">
-                    <svg class="bg-msg-icon" viewBox="0 0 24 24" fill="currentColor">
-                        <path
-                            d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9.5 7.5v9l7-4.5-7-4.5z" />
-                    </svg>
-                    <span class="bg-msg-title">If video not playing</span>
-                    <span class="bg-msg-sub">Use External Player</span>
-                </div>
-                <media-player id="player" title="{{ file_name }}" playsinline keyTarget="document">
-                    <media-provider></media-provider>
-                    <media-video-layout></media-video-layout>
-                </media-player>
+        </div>
+        <div class="sheet-section">
+            <div class="sheet-section-label">Audio</div>
+            <div class="sheet-options" id="audioOptions">
+                <div class="sheet-empty">Only one audio track.</div>
             </div>
-        </section>
+        </div>
+    </div>
 
-        <!-- Command Bar -->
-        <nav class="command-bar">
-            <div class="command-glass">
-                <a href="{{ src|safe }}" download="{{ file_name }}" class="cmd-btn primary" id="downloadBtn">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                    </svg>
-                    <span>Download</span>
-                </a>
-
-                <div class="cmd-divider"></div>
-
-                <button class="cmd-btn" id="copyBtn" aria-label="Copy Link">
-                    <svg viewBox="0 0 24 24">
-                        <path
-                            d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
-                    </svg>
-                    <span>Copy Link</span>
-                </button>
-
-                <div class="cmd-divider"></div>
-
-                <button class="cmd-btn drawer-trigger" id="playersToggle" aria-expanded="false"
-                    aria-controls="playersDrawer" aria-label="Open in external player">
-                    <svg viewBox="0 0 24 24">
-                        <path
-                            d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9.5 7.5v9l7-4.5-7-4.5z" />
-                    </svg>
-                    <span>Open In</span>
-                    <svg class="chevron" viewBox="0 0 24 24">
-                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
-                    </svg>
-                </button>
+    <div class="sheet" id="openInSheet" hidden>
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Open In External Player</h3>
+        <div class="player-group" id="androidGroup">
+            <div class="group-label">Android</div>
+            <div class="player-grid">
+                <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=org.videolan.vlc;end" class="player-link">VLC</a>
+                <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.ad;S.title={{ file_name | urlencode }};end" class="player-link">MX Player</a>
+                <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.pro;S.title={{ file_name | urlencode }};end" class="player-link">MX Player Pro</a>
+                <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=dev.anilbeesetti.nextplayer;S.title={{ file_name | urlencode }};end" class="player-link">Next Player</a>
+                <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=is.xyz.mpv;S.title={{ file_name | urlencode }};end" class="player-link">MPV-Android</a>
+                <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.brouken.player;end" class="player-link">Just Player</a>
+                <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.newin.nplayer.pro;end" class="player-link">nPlayer</a>
             </div>
-        </nav>
-
-        <!-- External Players Drawer -->
-        <aside class="drawer" id="playersDrawer">
-            <div class="drawer-panel" id="drawerPanel" role="region" aria-labelledby="playersToggle">
-                <!-- Android -->
-                <div class="player-group" id="androidGroup">
-                    <div class="group-label">Android</div>
-                    <div class="player-grid">
-                        <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=org.videolan.vlc;end"
-                            class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            VLC
-                        </a>
-                        <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.ad;S.title={{ file_name | urlencode }};end"
-                            class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            MX Player
-                        </a>
-                        <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.pro;S.title={{ file_name | urlencode }};end"
-                            class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            MX Player Pro
-                        </a>
-                        <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.young.simple.player;end"
-                            class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            Splayer
-                        </a>
-                        <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=dev.anilbeesetti.nextplayer;S.title={{ file_name | urlencode }};end"
-                            class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            Next Player
-                        </a>
-                        <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=org.courville.nova;S.title={{ file_name | urlencode }};end"
-                            class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            Nova Player
-                        </a>
-                        <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=is.xyz.mpv;S.title={{ file_name | urlencode }};end"
-                            class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            MPV-Android
-                        </a>
-                        <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.brouken.player;end"
-                            class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            Just Player
-                        </a>
-                        <a href="intent:{{ src|safe }}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.newin.nplayer.pro;end"
-                            class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            nPlayer
-                        </a>
-                    </div>
-                </div>
-
-                <!-- iOS -->
-                <div class="player-group" id="iosGroup">
-                    <div class="group-label">iOS / iPadOS</div>
-                    <div class="player-grid">
-                        <a href="vlc-x-callback://x-callback-url/stream?url={{ src|safe }}" class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            VLC
-                        </a>
-                        <a href="infuse://x-callback-url/play?url={{ src|safe }}" class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            Infuse
-                        </a>
-                        <a href="nplayer://weblink?url={{ src|safe }}" class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            nPlayer
-                        </a>
-                        <a href="outplayer://{{ src|safe }}" class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            Outplayer
-                        </a>
-                        <a href="oplayer://{{ src|safe }}" class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            OPlayer
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Desktop -->
-                <div class="player-group" id="desktopGroup">
-                    <div class="group-label">Desktop</div>
-                    <div class="player-grid">
-                        <a href="vlc://{{ src|safe }}" class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            VLC
-                        </a>
-                        <a href="potplayer://{{ src|safe }}" class="player-link" data-os="windows">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            PotPlayer
-                        </a>
-                        <a href="iina://weblink?url={{ src|safe }}" class="player-link" data-os="mac">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            IINA
-                        </a>
-                        <a href="mpv://{{ src|safe }}" class="player-link">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            MPV
-                        </a>
-                        <a href="kmplayer://{{ src|safe }}" class="player-link" data-os="windows">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                            KMPlayer
-                        </a>
-                    </div>
-                </div>
+        </div>
+        <div class="player-group" id="iosGroup">
+            <div class="group-label">iOS / iPadOS</div>
+            <div class="player-grid">
+                <a href="vlc-x-callback://x-callback-url/stream?url={{ src|safe }}" class="player-link">VLC</a>
+                <a href="infuse://x-callback-url/play?url={{ src|safe }}" class="player-link">Infuse</a>
+                <a href="nplayer://weblink?url={{ src|safe }}" class="player-link">nPlayer</a>
+                <a href="outplayer://{{ src|safe }}" class="player-link">Outplayer</a>
             </div>
-        </aside>
-
-        <!-- Footer Group -->
-        <footer class="footer-group">
-            <!-- Keyboard Hints -->
-            <div class="keyboard-hints" id="keyboardHints">
-                <div class="hints-row">
-                    <div class="hint">
-                        <kbd>Space</kbd>
-                        <span>Play / Pause</span>
-                    </div>
-                    <div class="hint">
-                        <kbd>←</kbd><kbd>→</kbd>
-                        <span>Seek</span>
-                    </div>
-                    <div class="hint">
-                        <kbd>↑</kbd><kbd>↓</kbd>
-                        <span>Volume</span>
-                    </div>
-                    <div class="hint">
-                        <kbd>F</kbd>
-                        <span>Fullscreen</span>
-                    </div>
-                    <div class="hint">
-                        <kbd>M</kbd>
-                        <span>Mute</span>
-                    </div>
-                    <div class="hint">
-                        <kbd>&lt;</kbd><kbd>&gt;</kbd>
-                        <span>Speed</span>
-                    </div>
-                </div>
+        </div>
+        <div class="player-group" id="desktopGroup">
+            <div class="group-label">Desktop</div>
+            <div class="player-grid">
+                <a href="vlc://{{ src|safe }}" class="player-link">VLC</a>
+                <a href="potplayer://{{ src|safe }}" class="player-link" data-os="windows">PotPlayer</a>
+                <a href="iina://weblink?url={{ src|safe }}" class="player-link" data-os="mac">IINA</a>
+                <a href="mpv://{{ src|safe }}" class="player-link">MPV</a>
             </div>
-
-            <!-- Copyright -->
-            <div class="copyright-footer">
-                <span>&copy; <span id="copyrightYear"></span> Thunder</span>
-                <span class="footer-separator">•</span>
-                <a href="https://t.me/TJ_Bots" target="_blank" rel="noopener noreferrer"
-                    class="footer-link channel-link" aria-label="Telegram Channel">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <path fill="currentColor"
-                            d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.14-3.05-2 1.94c-.24.24-.44.44-.9.44z" />
-                    </svg>
-                    @TJ_Bots
-                </a>
-                <span class="footer-separator">•</span>
-                <a href="https://github.com/Tj-Bots/FileToLink" target="_blank" rel="noopener noreferrer"
-                    class="footer-link" aria-label="GitHub">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <path fill="currentColor"
-                            d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34c-.46-1.16-1.11-1.47-1.11-1.47c-.91-.62.07-.6.07-.6c1 .07 1.53 1.03 1.53 1.03c.87 1.52 2.34 1.07 2.91.83c.09-.65.35-1.09.63-1.34c-2.22-.25-4.55-1.11-4.55-4.92c0-1.11.38-2 1.03-2.71c-.1-.25-.45-1.29.1-2.64c0 0 .84-.27 2.75 1.02c.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02c.55 1.35.2 2.39.1 2.64c.65.71 1.03 1.6 1.03 2.71c0 3.82-2.34 4.66-4.57 4.91c.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2" />
-                    </svg>
-                    GitHub
-                </a>
-            </div>
-        </footer>
-    </main>
+        </div>
+    </div>
 
     <!-- Toast Stack -->
     <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
+    <!-- Minimal footer, reached by scrolling past the immersive player -->
+    <footer class="footer-group">
+        <div class="copyright-footer">
+            <span>&copy; <span id="copyrightYear"></span> Thunder</span>
+            <span class="footer-separator">•</span>
+            <a href="https://t.me/TJ_Bots" target="_blank" rel="noopener noreferrer" class="footer-link channel-link" aria-label="Telegram Channel">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.14-3.05-2 1.94c-.24.24-.44.44-.9.44z"/></svg>
+                @TJ_Bots
+            </a>
+            <span class="footer-separator">•</span>
+            <a href="https://github.com/Tj-Bots/FileToLink" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="GitHub">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34c-.46-1.16-1.11-1.47-1.11-1.47c-.91-.62.07-.6.07-.6c1 .07 1.53 1.03 1.53 1.03c.87 1.52 2.34 1.07 2.91.83c.09-.65.35-1.09.63-1.34c-2.22-.25-4.55-1.11-4.55-4.92c0-1.11.38-2 1.03-2.71c-.1-.25-.45-1.29.1-2.64c0 0 .84-.27 2.75 1.02c.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02c.55 1.35.2 2.39.1 2.64c.65.71 1.03 1.6 1.03 2.71c0 3.82-2.34 4.66-4.57 4.91c.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2"/></svg>
+                GitHub
+            </a>
+        </div>
+    </footer>
+
     <!-- Config for external script (template injection happens here) -->
     <script>
-        window.__CINEMA_CONFIG__ = { src: {{ src | tojson }} };
+        window.__CINEMA_CONFIG__ = { src: {{ src | tojson }}, fileName: {{ file_name | tojson }} };
     </script>
-    <!-- Main Script (CDN-hosted) -->
+    <!-- Main Script (self-hosted) -->
     <script src="https://cdn.jsdelivr.net/gh/Tj-Bots/FileToLink@f91cfdb5a75b4a1a732c3fdc5215383d9760b39e/Thunder/assets/obsidian-ember/script.js"></script>
 </body>
 
