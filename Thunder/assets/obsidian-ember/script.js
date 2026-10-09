@@ -20,6 +20,7 @@
     const themeToggle = document.getElementById('themeToggle');
     const metaDuration = document.getElementById('metaDuration');
     const metaResolution = document.getElementById('metaResolution');
+    const fileMeta = document.getElementById('fileMeta');
 
     // ═══════════════════════════════════════════
     // UTILITY FUNCTIONS
@@ -70,6 +71,74 @@
         });
     };
 
+    // ═══════════════════════════════════════════
+    // SUBTITLE & AUDIO TRACK DISCOVERY
+    // ═══════════════════════════════════════════
+    const deriveAuxUrl = (prefix) => {
+        if (!VIDEO_SRC) return null;
+        try {
+            const url = new URL(VIDEO_SRC, window.location.href);
+            url.search = '';
+            url.pathname = `/${prefix}${url.pathname}`;
+            return url;
+        } catch {
+            return null;
+        }
+    };
+
+    const initTracks = async () => {
+        const tracksUrl = deriveAuxUrl('tracks');
+        if (!tracksUrl) return;
+
+        let data;
+        try {
+            const res = await fetch(tracksUrl.toString());
+            if (!res.ok) return;
+            data = await res.json();
+        } catch {
+            return;
+        }
+
+        const tracks = Array.isArray(data?.tracks) ? data.tracks : [];
+        const subtitleTracks = tracks.filter((t) => t.type === 'subtitle');
+        const audioTracks = tracks.filter((t) => t.type === 'audio');
+
+        subtitleTracks.forEach((track, index) => {
+            const subUrl = deriveAuxUrl('subtitle');
+            if (!subUrl || track.number == null) return;
+            subUrl.searchParams.set('track', track.number);
+            const hasLanguage = track.language && track.language !== 'und';
+            const label = track.name || (hasLanguage ? track.language.toUpperCase() : `Track ${index + 1}`);
+            try {
+                player.textTracks.add({
+                    src: subUrl.toString(),
+                    kind: 'subtitles',
+                    label,
+                    language: hasLanguage ? track.language : undefined,
+                    type: 'vtt',
+                    default: index === 0,
+                });
+            } catch {
+                // Older/newer player builds may expose a slightly different API;
+                // fail quietly rather than break the rest of the page.
+            }
+        });
+
+        if (audioTracks.length > 1 && fileMeta) {
+            const langs = audioTracks
+                .map((t) => (t.language && t.language !== 'und' ? t.language.toUpperCase() : null))
+                .filter(Boolean);
+            const badge = document.createElement('span');
+            badge.className = 'meta-tag loaded';
+            badge.title = "Multiple audio tracks are embedded in this file. In-browser switching isn't supported — download the file to pick a track in an external player.";
+            badge.innerHTML = `
+                <svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
+                <span>${audioTracks.length} audio${langs.length ? ': ' + langs.join('/') : ''}</span>
+            `;
+            fileMeta.appendChild(badge);
+        }
+    };
+
     // Initialize when player is ready
     if (player) {
         // Wait for custom element to be defined
@@ -91,6 +160,7 @@
             }
 
             initVideoMetadata();
+            initTracks();
         });
     }
 
