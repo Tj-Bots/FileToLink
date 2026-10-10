@@ -100,61 +100,34 @@
     };
 
     // ═══════════════════════════════════════════
-    // LANGUAGE — Hebrew UI when the browser is in Hebrew, English otherwise
+    // UI STRINGS
     // ═══════════════════════════════════════════
-    const IS_HE = /^(he|iw)\b/i.test(navigator.language || '');
     const STRINGS = {
-        en: {
-            sleep: 'Sleep', lock: 'Lock', subtitles: 'Subtitles', audio: 'Audio', openIn: 'Open In',
-            notPlaying: 'If video not playing', useExternal: 'Use External Player', tapUnlock: 'Tap to unlock',
-            noSubs: 'No embedded subtitles found.', oneAudio: 'Only one audio track.',
-            fontSize: 'Font size', position: 'Position', subSync: 'Subtitle sync', style: 'Style',
-            outline: 'Outline', shadow: 'Shadow', background: 'Background',
-            download: 'Download', copyLink: 'Copy Link', desktop: 'Desktop', close: 'Close',
-            speed: 'Playback Speed', sleepTimer: 'Sleep Timer', openExternal: 'Open In External Player',
-            audioSubs: 'Audio & Subtitles', subSettings: 'Subtitle Settings',
-            pipActive: 'Playing in a floating window', pipReturn: 'Bring it back here',
-            off: 'Off', timerOff: 'Off', normalSpeed: 'Normal (1x)', minutes: (n) => `${n} minutes`,
-            linkCopied: 'Link copied to clipboard', copyFailed: 'Could not copy link',
-            pipUnsupported: 'Picture-in-picture is not supported here',
-            sleepPaused: 'Sleep timer: playback paused', sleepSet: (l) => `Sleep timer set: ${l}`, sleepOff: 'Sleep timer off',
-            subsLoading: 'Loading subtitles…', subsRetry: "Couldn't load subtitles, retrying…",
-            subsPreview: 'This is how subtitles will look.',
-            imageSubs: 'Image-based subtitles (PGS/VobSub) can only be shown by an external player.',
-            audioNoSwitch: "The browser can't switch audio tracks - use Open In for an external player.",
-            track: (n) => `Track ${n}`,
-        },
-        he: {
-            sleep: 'טיימר שינה', lock: 'נעילה', subtitles: 'כתוביות', audio: 'שמע', openIn: 'פתח בנגן',
-            notPlaying: 'הסרטון לא מתנגן?', useExternal: 'פתח בנגן חיצוני', tapUnlock: 'הקש לביטול הנעילה',
-            noSubs: 'לא נמצאו כתוביות בקובץ.', oneAudio: 'יש רק ערוץ שמע אחד.',
-            fontSize: 'גודל גופן', position: 'מיקום', subSync: 'סנכרון כתוביות', style: 'סגנון',
-            outline: 'מסגרת', shadow: 'צל', background: 'רקע מלא',
-            download: 'הורדה', copyLink: 'העתק קישור', desktop: 'מחשב', close: 'סגירה',
-            speed: 'מהירות', sleepTimer: 'טיימר שינה', openExternal: 'פתיחה בנגן חיצוני',
-            audioSubs: 'שמע וכתוביות', subSettings: 'הגדרות כתוביות',
-            pipActive: 'הסרטון מוצג עכשיו בחלון ממוזער', pipReturn: 'החזר לכאן',
-            off: 'כבויות', timerOff: 'כבוי', normalSpeed: 'רגיל (1x)', minutes: (n) => `${n} דקות`,
-            linkCopied: 'הקישור הועתק', copyFailed: 'לא ניתן להעתיק את הקישור',
-            pipUnsupported: 'חלון ממוזער לא נתמך כאן',
-            sleepPaused: 'טיימר שינה: הסרטון נעצר', sleepSet: (l) => `טיימר שינה: ${l}`, sleepOff: 'טיימר השינה כבוי',
-            subsLoading: 'טוען כתוביות…', subsRetry: 'טעינת הכתוביות נכשלה, מנסה שוב…',
-            subsPreview: 'כך ייראו הכתוביות.',
-            imageSubs: 'כתוביות מסוג תמונה (PGS/VobSub) מוצגות רק בנגן חיצוני.',
-            audioNoSwitch: 'הדפדפן לא יכול להחליף ערוץ שמע - אפשר דרך "פתח ב..." בנגן חיצוני.',
-            track: (n) => `ערוץ ${n}`,
-        },
+        sleep: 'Sleep', lock: 'Lock', subtitles: 'Subtitles', audio: 'Audio', openIn: 'Open In',
+        notPlaying: 'If video not playing', useExternal: 'Use External Player', tapUnlock: 'Tap to unlock',
+        noSubs: 'No embedded subtitles found.', oneAudio: 'Only one audio track.',
+        fontSize: 'Font size', position: 'Position', subSync: 'Subtitle sync', style: 'Style',
+        outline: 'Outline', shadow: 'Shadow', background: 'Background',
+        download: 'Download', copyLink: 'Copy Link', desktop: 'Desktop', close: 'Close',
+        speed: 'Playback Speed', sleepTimer: 'Sleep Timer', openExternal: 'Open In External Player',
+        audioSubs: 'Audio & Subtitles', subSettings: 'Subtitle Settings',
+        pipActive: 'Playing in a floating window', pipReturn: 'Bring it back here',
+        off: 'Off', timerOff: 'Off', normalSpeed: 'Normal (1x)', minutes: (n) => `${n} minutes`,
+        linkCopied: 'Link copied to clipboard', copyFailed: 'Could not copy link',
+        pipUnsupported: 'Picture-in-picture is not supported here',
+        sleepPaused: 'Sleep timer: playback paused', sleepSet: (l) => `Sleep timer set: ${l}`, sleepOff: 'Sleep timer off',
+        subsLoading: 'Loading subtitles…', subsRetry: "Couldn't load subtitles, retrying…",
+        subsPreview: 'This is how subtitles will look.',
+        imageSubs: 'Image-based subtitles (PGS/VobSub) can only be shown by an external player.',
+        audioNoSwitch: "The browser can't switch audio tracks - use Open In for an external player.",
+        track: (n) => `Track ${n}`,
     };
     const t = (key, ...args) => {
-        const v = (IS_HE ? STRINGS.he : STRINGS.en)[key] ?? STRINGS.en[key] ?? key;
+        const v = STRINGS[key] ?? key;
         return typeof v === 'function' ? v(...args) : v;
     };
-    document.querySelectorAll('[data-i18n]').forEach((el) => {
-        el.textContent = t(el.dataset.i18n);
-        if (IS_HE) el.dir = 'auto';
-    });
+    document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
     document.querySelectorAll('[data-i18n-aria]').forEach((el) => el.setAttribute('aria-label', t(el.dataset.i18nAria)));
-    if (IS_HE) document.querySelectorAll('.sheet, .pip-placeholder').forEach((el) => { el.dir = 'rtl'; });
 
     if (copyrightYear) copyrightYear.textContent = new Date().getFullYear();
 
@@ -535,7 +508,6 @@
             pipWin.document.head.appendChild(node.cloneNode(true));
         });
         pipWin.document.documentElement.classList.add('pip-doc');
-        if (IS_HE) pipWin.document.documentElement.lang = 'he';
         stage.setAttribute('data-docpip', '');
         pipWin.document.body.appendChild(stage);
         setPipShown(true);
@@ -797,7 +769,7 @@
     const languageName = (code) => {
         if (!code || code === 'und') return null;
         try {
-            const name = new Intl.DisplayNames([navigator.language || 'en', 'en'], { type: 'language' }).of(code);
+            const name = new Intl.DisplayNames(['en'], { type: 'language' }).of(code);
             if (name && name.toLowerCase() !== code.toLowerCase()) return name;
         } catch { /* fall through */ }
         return code.toUpperCase();
