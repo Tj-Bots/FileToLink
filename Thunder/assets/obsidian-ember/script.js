@@ -16,6 +16,14 @@
     const backBtn = document.getElementById('backBtn');
     const shareBtn = document.getElementById('shareBtn');
     const pipBtn = document.getElementById('pipBtn');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const iconFsEnter = fullscreenBtn?.querySelector('.icon-fs-enter');
+    const iconFsExit = fullscreenBtn?.querySelector('.icon-fs-exit');
+
+    const metaDuration = document.getElementById('metaDuration');
+    const metaResolution = document.getElementById('metaResolution');
+    const pageCopyBtn = document.getElementById('pageCopyBtn');
+    const pageOpenInBtn = document.getElementById('pageOpenInBtn');
 
     const seekBackBtn = document.getElementById('seekBackBtn');
     const seekFwdBtn = document.getElementById('seekFwdBtn');
@@ -122,22 +130,22 @@
     sheetBackdrop?.addEventListener('click', closeSheets);
 
     // ═══════════════════════════════════════════
-    // PLAYER WIRING — operates on the native <video>
-    // element directly (standard HTMLMediaElement /
-    // TextTrack APIs) rather than vidstack's own
-    // subscribe()/textTracks.add() proxy, which turned
-    // out not to behave as documented in this player
-    // version: play/pause state never reflected and
-    // added text tracks never actually showed captions.
+    // PLAYER WIRING — #player is a plain <video>
+    // element; everything here is the standard
+    // HTMLMediaElement / TextTrack API. (An earlier
+    // version routed this through the vidstack engine
+    // purely to obtain this same native element, but
+    // vidstack's own state proxy and manually-appended
+    // <track> children didn't survive its internal
+    // re-renders reliably, so it's cut out entirely.)
     // ═══════════════════════════════════════════
     if (!player) return;
 
     let duration = 0;
     let userSeeking = false;
-    let video = null;
+    const video = player;
 
     const setPlayButtonState = () => {
-        if (!video) return;
         const showSpinner = video.readyState < 3 && !video.paused && !video.ended;
         const showPause = !video.paused && !showSpinner && !video.ended;
         setHidden(iconPlay, showPause || showSpinner);
@@ -146,7 +154,6 @@
     };
 
     const togglePlay = () => {
-        if (!video) return;
         try {
             if (video.paused) {
                 video.play()?.catch?.(() => {});
@@ -159,9 +166,12 @@
     };
 
     const updateTimeDisplay = () => {
-        if (!video) return;
         duration = video.duration || 0;
         if (timeDuration) timeDuration.textContent = formatTime(duration);
+        if (metaDuration) metaDuration.querySelector('span').textContent = formatTime(duration);
+        if (metaResolution && video.videoWidth) {
+            metaResolution.querySelector('span').textContent = `${video.videoWidth}x${video.videoHeight}`;
+        }
         if (!userSeeking) {
             if (seekBar && duration > 0) {
                 const pct = Math.min(1000, Math.max(0, (video.currentTime / duration) * 1000));
@@ -172,59 +182,55 @@
         }
     };
 
-    const onVideoReady = (el) => {
-        if (video === el) return;
-        video = el;
+    ['play', 'pause', 'waiting', 'playing', 'canplay', 'ended'].forEach((evt) => {
+        video.addEventListener(evt, setPlayButtonState);
+    });
+    video.addEventListener('timeupdate', updateTimeDisplay);
+    video.addEventListener('durationchange', updateTimeDisplay);
+    video.addEventListener('loadedmetadata', updateTimeDisplay);
+    video.addEventListener('volumechange', () => {
+        if (!volumeSlider) return;
+        const pct = video.muted ? 0 : Math.round(video.volume * 100);
+        volumeSlider.value = String(pct);
+        if (volumeIcon) volumeIcon.style.opacity = pct === 0 ? '.5' : '1';
+    });
+    video.addEventListener('ratechange', () => {
+        if (!speedLabel) return;
+        const rate = video.playbackRate || 1;
+        speedLabel.textContent = rate === 1 ? '1x' : `${rate}x`;
+    });
+    video.addEventListener('error', () => {
+        setHidden(bgMessage, false);
+    });
 
-        ['play', 'pause', 'waiting', 'playing', 'canplay', 'ended'].forEach((evt) => {
-            video.addEventListener(evt, setPlayButtonState);
-        });
-        video.addEventListener('timeupdate', updateTimeDisplay);
-        video.addEventListener('durationchange', updateTimeDisplay);
-        video.addEventListener('loadedmetadata', updateTimeDisplay);
-        video.addEventListener('volumechange', () => {
-            if (!volumeSlider) return;
-            const pct = video.muted ? 0 : Math.round(video.volume * 100);
-            volumeSlider.value = String(pct);
-            if (volumeIcon) volumeIcon.style.opacity = pct === 0 ? '.5' : '1';
-        });
-        video.addEventListener('ratechange', () => {
-            if (!speedLabel) return;
-            const rate = video.playbackRate || 1;
-            speedLabel.textContent = rate === 1 ? '1x' : `${rate}x`;
-        });
-        video.addEventListener('error', () => {
-            setHidden(bgMessage, false);
-        });
+    video.src = VIDEO_SRC;
+    setPlayButtonState();
+    updateTimeDisplay();
 
-        setPlayButtonState();
-        updateTimeDisplay();
-        initTracks();
+    // ═══════════════════════════════════════════
+    // FULLSCREEN
+    // ═══════════════════════════════════════════
+    const toggleFullscreen = () => {
+        try {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                stage?.requestFullscreen?.();
+            }
+        } catch {
+            // Ignore.
+        }
     };
 
-    // The native <video> is created lazily inside <media-provider>; watch
-    // for it rather than relying on any particular vidstack lifecycle event.
-    const videoWatcher = new MutationObserver(() => {
-        const el = stage?.querySelector('video');
-        if (el) onVideoReady(el);
+    document.addEventListener('fullscreenchange', () => {
+        const isFs = document.fullscreenElement === stage;
+        setHidden(iconFsEnter, isFs);
+        setHidden(iconFsExit, !isFs);
     });
-    videoWatcher.observe(stage, { childList: true, subtree: true });
 
-    customElements.whenDefined('media-player').then(() => {
-        const isSupportedAudio = /\.(mp3|wav|ogg|flac|m4a|aac)(\?.*)?$/i.test(VIDEO_SRC);
-        const isUnsupportedAudio = /\.(wma|ac3|dts|aif|aiff|alac)(\?.*)?$/i.test(VIDEO_SRC);
-
-        if (isSupportedAudio) {
-            player.src = VIDEO_SRC;
-        } else if (isUnsupportedAudio) {
-            player.src = { src: VIDEO_SRC, type: 'audio/mp3' };
-        } else {
-            player.src = { src: VIDEO_SRC, type: 'video/mp4' };
-        }
-
-        // In case the <video> already exists by the time src is set.
-        const el = stage?.querySelector('video');
-        if (el) onVideoReady(el);
+    fullscreenBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFullscreen();
     });
 
     // ═══════════════════════════════════════════
@@ -451,6 +457,16 @@
     // OPEN IN EXTERNAL PLAYER
     // ═══════════════════════════════════════════
     openInBtn?.addEventListener('click', () => openSheet(openInSheet));
+    pageOpenInBtn?.addEventListener('click', () => openSheet(openInSheet));
+
+    pageCopyBtn?.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            toast('Link copied to clipboard');
+        } catch {
+            toast('Could not copy link');
+        }
+    });
 
     // ═══════════════════════════════════════════
     // SUBTITLE & AUDIO TRACK DISCOVERY
@@ -466,13 +482,17 @@
             if (!subtitleTracks.length) {
                 subtitleOptions.innerHTML = '<div class="sheet-empty">No embedded subtitles found.</div>';
             } else {
+                // Reflect whatever is actually showing right now, not just "Off" -
+                // this sheet gets rebuilt every time it's opened, so it must not
+                // forget a selection that's already active on the video.
+                const activeLabel = Array.from(video.textTracks || [])
+                    .find((t) => t.mode === 'showing')?.label || null;
+
                 const offBtn = document.createElement('button');
-                offBtn.className = 'sheet-option selected';
+                offBtn.className = 'sheet-option' + (activeLabel ? '' : ' selected');
                 offBtn.textContent = 'Off';
                 offBtn.addEventListener('click', () => {
-                    if (video) {
-                        Array.from(video.textTracks || []).forEach((t) => { t.mode = 'disabled'; });
-                    }
+                    Array.from(video.textTracks || []).forEach((t) => { t.mode = 'disabled'; });
                     syncSelectedOption(subtitleOptions, offBtn);
                     closeSheets();
                 });
@@ -482,15 +502,13 @@
                     const hasLanguage = track.language && track.language !== 'und';
                     const label = track.name || (hasLanguage ? track.language.toUpperCase() : `Track ${index + 1}`);
                     const btn = document.createElement('button');
-                    btn.className = 'sheet-option';
+                    btn.className = 'sheet-option' + (label === activeLabel ? ' selected' : '');
                     btn.textContent = label;
                     btn.addEventListener('click', () => {
                         const trackEl = ensureSubtitleAdded(track, index);
-                        if (video) {
-                            Array.from(video.textTracks || []).forEach((t) => {
-                                t.mode = (trackEl && t.label === trackEl.label) ? 'showing' : 'disabled';
-                            });
-                        }
+                        Array.from(video.textTracks || []).forEach((t) => {
+                            t.mode = (trackEl && t.label === trackEl.label) ? 'showing' : 'disabled';
+                        });
                         syncSelectedOption(subtitleOptions, btn);
                         closeSheets();
                     });
@@ -562,6 +580,8 @@
         renderTrackSheets();
     };
 
+    initTracks();
+
     tracksBtn?.addEventListener('click', () => {
         renderTrackSheets();
         openSheet(tracksSheet);
@@ -586,10 +606,7 @@
                 seekBy(10);
                 break;
             case 'f':
-                try {
-                    if (document.fullscreenElement) document.exitFullscreen();
-                    else stage?.requestFullscreen?.();
-                } catch { /* ignore */ }
+                toggleFullscreen();
                 break;
             case 'm':
                 try { if (video) video.muted = !video.muted; } catch { /* ignore */ }
