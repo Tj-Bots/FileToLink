@@ -85,6 +85,7 @@
         if (!toastStack) return;
         const el = document.createElement('div');
         el.className = 'toast';
+        el.dir = 'auto';
         el.textContent = message;
         toastStack.appendChild(el);
         setTimeout(() => el.remove(), 2600);
@@ -97,6 +98,63 @@
         if (!el) return;
         el.toggleAttribute('hidden', hide);
     };
+
+    // ═══════════════════════════════════════════
+    // LANGUAGE — Hebrew UI when the browser is in Hebrew, English otherwise
+    // ═══════════════════════════════════════════
+    const IS_HE = /^(he|iw)\b/i.test(navigator.language || '');
+    const STRINGS = {
+        en: {
+            sleep: 'Sleep', lock: 'Lock', subtitles: 'Subtitles', audio: 'Audio', openIn: 'Open In',
+            notPlaying: 'If video not playing', useExternal: 'Use External Player', tapUnlock: 'Tap to unlock',
+            noSubs: 'No embedded subtitles found.', oneAudio: 'Only one audio track.',
+            fontSize: 'Font size', position: 'Position', subSync: 'Subtitle sync', style: 'Style',
+            outline: 'Outline', shadow: 'Shadow', background: 'Background',
+            download: 'Download', copyLink: 'Copy Link', desktop: 'Desktop', close: 'Close',
+            speed: 'Playback Speed', sleepTimer: 'Sleep Timer', openExternal: 'Open In External Player',
+            audioSubs: 'Audio & Subtitles', subSettings: 'Subtitle Settings',
+            pipActive: 'Playing in a floating window', pipReturn: 'Bring it back here',
+            off: 'Off', timerOff: 'Off', normalSpeed: 'Normal (1x)', minutes: (n) => `${n} minutes`,
+            linkCopied: 'Link copied to clipboard', copyFailed: 'Could not copy link',
+            pipUnsupported: 'Picture-in-picture is not supported here',
+            sleepPaused: 'Sleep timer: playback paused', sleepSet: (l) => `Sleep timer set: ${l}`, sleepOff: 'Sleep timer off',
+            subsLoading: 'Loading subtitles…', subsRetry: "Couldn't load subtitles, retrying…",
+            subsPreview: 'This is how subtitles will look.',
+            imageSubs: 'Image-based subtitles (PGS/VobSub) can only be shown by an external player.',
+            audioNoSwitch: "The browser can't switch audio tracks - use Open In for an external player.",
+            track: (n) => `Track ${n}`,
+        },
+        he: {
+            sleep: 'טיימר שינה', lock: 'נעילה', subtitles: 'כתוביות', audio: 'שמע', openIn: 'פתח בנגן',
+            notPlaying: 'הסרטון לא מתנגן?', useExternal: 'פתח בנגן חיצוני', tapUnlock: 'הקש לביטול הנעילה',
+            noSubs: 'לא נמצאו כתוביות בקובץ.', oneAudio: 'יש רק ערוץ שמע אחד.',
+            fontSize: 'גודל גופן', position: 'מיקום', subSync: 'סנכרון כתוביות', style: 'סגנון',
+            outline: 'מסגרת', shadow: 'צל', background: 'רקע מלא',
+            download: 'הורדה', copyLink: 'העתק קישור', desktop: 'מחשב', close: 'סגירה',
+            speed: 'מהירות', sleepTimer: 'טיימר שינה', openExternal: 'פתיחה בנגן חיצוני',
+            audioSubs: 'שמע וכתוביות', subSettings: 'הגדרות כתוביות',
+            pipActive: 'הסרטון מוצג עכשיו בחלון ממוזער', pipReturn: 'החזר לכאן',
+            off: 'כבויות', timerOff: 'כבוי', normalSpeed: 'רגיל (1x)', minutes: (n) => `${n} דקות`,
+            linkCopied: 'הקישור הועתק', copyFailed: 'לא ניתן להעתיק את הקישור',
+            pipUnsupported: 'חלון ממוזער לא נתמך כאן',
+            sleepPaused: 'טיימר שינה: הסרטון נעצר', sleepSet: (l) => `טיימר שינה: ${l}`, sleepOff: 'טיימר השינה כבוי',
+            subsLoading: 'טוען כתוביות…', subsRetry: 'טעינת הכתוביות נכשלה, מנסה שוב…',
+            subsPreview: 'כך ייראו הכתוביות.',
+            imageSubs: 'כתוביות מסוג תמונה (PGS/VobSub) מוצגות רק בנגן חיצוני.',
+            audioNoSwitch: 'הדפדפן לא יכול להחליף ערוץ שמע - אפשר דרך "פתח ב..." בנגן חיצוני.',
+            track: (n) => `ערוץ ${n}`,
+        },
+    };
+    const t = (key, ...args) => {
+        const v = (IS_HE ? STRINGS.he : STRINGS.en)[key] ?? STRINGS.en[key] ?? key;
+        return typeof v === 'function' ? v(...args) : v;
+    };
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+        el.textContent = t(el.dataset.i18n);
+        if (IS_HE) el.dir = 'auto';
+    });
+    document.querySelectorAll('[data-i18n-aria]').forEach((el) => el.setAttribute('aria-label', t(el.dataset.i18nAria)));
+    if (IS_HE) document.querySelectorAll('.sheet, .pip-placeholder').forEach((el) => { el.dir = 'rtl'; });
 
     if (copyrightYear) copyrightYear.textContent = new Date().getFullYear();
 
@@ -133,6 +191,7 @@
     };
 
     sheetBackdrop?.addEventListener('click', closeSheets);
+    document.querySelectorAll('.sheet-close').forEach((b) => b.addEventListener('click', closeSheets));
 
     // ═══════════════════════════════════════════
     // PLAYER WIRING — #player is a plain <video>
@@ -441,26 +500,85 @@
         }
         try {
             await navigator.clipboard.writeText(window.location.href);
-            toast('Link copied to clipboard');
+            toast(t('linkCopied'));
         } catch {
-            toast('Could not copy link');
+            toast(t('copyFailed'));
         }
     });
 
-    pipBtn?.addEventListener('click', async () => {
-        if (!video) return;
+    // ═══════════════════════════════════════════
+    // FLOATING WINDOW (picture-in-picture)
+    // Where the browser has Document Picture-in-Picture (desktop Chrome /
+    // Edge), the whole player moves into the floating window - controls and
+    // our subtitles included. Otherwise it's the plain video PiP, where the
+    // browser draws only the picture (Chrome on Android shows no subtitles
+    // there, and offers no way for a page to add any).
+    // While floating, the video's place on the page says so and offers a
+    // button to bring it back.
+    // ═══════════════════════════════════════════
+    const screenEl = stage?.parentElement;
+    const pipPlaceholder = document.getElementById('pipPlaceholder');
+    let docPipWindow = null;
+
+    const setPipShown = (on) => {
+        screenEl?.toggleAttribute('data-pip', on);
+        setHidden(pipPlaceholder, !on);
+    };
+
+    const openDocumentPip = async () => {
+        const pipWin = await window.documentPictureInPicture.requestWindow({
+            width: Math.max(320, Math.round(stage.clientWidth)),
+            height: Math.max(180, Math.round(stage.clientHeight)),
+        });
+        docPipWindow = pipWin;
+        document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
+            pipWin.document.head.appendChild(node.cloneNode(true));
+        });
+        pipWin.document.documentElement.classList.add('pip-doc');
+        if (IS_HE) pipWin.document.documentElement.lang = 'he';
+        stage.setAttribute('data-docpip', '');
+        pipWin.document.body.appendChild(stage);
+        setPipShown(true);
+        pipWin.addEventListener('pagehide', () => {
+            stage.removeAttribute('data-docpip');
+            screenEl?.insertBefore(stage, pipPlaceholder);
+            docPipWindow = null;
+            setPipShown(false);
+            positionSubs();
+        }, { once: true });
+        positionSubs();
+    };
+
+    const enterPip = async () => {
+        if (isExpanded()) toggleFullscreen();
         try {
-            if (document.pictureInPictureElement) {
-                await document.exitPictureInPicture();
-            } else if (document.pictureInPictureEnabled) {
+            if ('documentPictureInPicture' in window && stage && screenEl) {
+                await openDocumentPip();
+            } else if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
                 await video.requestPictureInPicture();
             } else {
-                toast('Picture-in-picture is not supported here');
+                toast(t('pipUnsupported'));
             }
         } catch {
-            toast('Picture-in-picture is not supported here');
+            toast(t('pipUnsupported'));
         }
+    };
+
+    const exitPip = async () => {
+        try {
+            if (docPipWindow) docPipWindow.close();
+            else if (document.pictureInPictureElement) await document.exitPictureInPicture();
+        } catch { /* ignore */ }
+    };
+
+    pipBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (docPipWindow || document.pictureInPictureElement) exitPip();
+        else enterPip();
     });
+    document.getElementById('pipReturnBtn')?.addEventListener('click', exitPip);
+    video.addEventListener('enterpictureinpicture', () => setPipShown(true));
+    video.addEventListener('leavepictureinpicture', () => setPipShown(false));
 
     // ═══════════════════════════════════════════
     // CENTER CONTROLS
@@ -566,7 +684,7 @@
         SPEEDS.forEach((rate) => {
             const btn = document.createElement('button');
             btn.className = 'sheet-option' + (rate === current ? ' selected' : '');
-            btn.textContent = rate === 1 ? 'Normal (1x)' : `${rate}x`;
+            btn.textContent = rate === 1 ? t('normalSpeed') : `${rate}x`;
             btn.addEventListener('click', () => {
                 try { if (video) video.playbackRate = rate; } catch { /* ignore */ }
                 closeSheets();
@@ -588,12 +706,12 @@
     let sleepTimerMinutes = null;
 
     const SLEEP_OPTIONS = [
-        { label: 'Off', minutes: null },
-        { label: '10 minutes', minutes: 10 },
-        { label: '20 minutes', minutes: 20 },
-        { label: '30 minutes', minutes: 30 },
-        { label: '45 minutes', minutes: 45 },
-        { label: '60 minutes', minutes: 60 },
+        { label: t('timerOff'), minutes: null },
+        { label: t('minutes', 10), minutes: 10 },
+        { label: t('minutes', 20), minutes: 20 },
+        { label: t('minutes', 30), minutes: 30 },
+        { label: t('minutes', 45), minutes: 45 },
+        { label: t('minutes', 60), minutes: 60 },
     ];
 
     const renderSleepOptions = () => {
@@ -609,11 +727,11 @@
                 if (minutes) {
                     sleepTimerHandle = setTimeout(() => {
                         try { video?.pause(); } catch { /* ignore */ }
-                        toast('Sleep timer: playback paused');
+                        toast(t('sleepPaused'));
                     }, minutes * 60 * 1000);
-                    toast(`Sleep timer set: ${label}`);
+                    toast(t('sleepSet', label));
                 } else {
-                    toast('Sleep timer off');
+                    toast(t('sleepOff'));
                 }
                 closeSheets();
             });
@@ -649,9 +767,9 @@
     pageCopyBtn?.addEventListener('click', async () => {
         try {
             await navigator.clipboard.writeText(window.location.href);
-            toast('Link copied to clipboard');
+            toast(t('linkCopied'));
         } catch {
-            toast('Could not copy link');
+            toast(t('copyFailed'));
         }
     });
 
@@ -747,7 +865,7 @@
     const renderCues = () => {
         if (!subOverlay) return;
         let texts = activeCues().map((c) => c.t);
-        if (!texts.length && subPreview) texts = ['כך ייראו הכתוביות.'];
+        if (!texts.length && subPreview) texts = [t('subsPreview')];
         const key = texts.join('|') + `|${subPreview}`;
         if (key === shownCueKey) return;
         shownCueKey = key;
@@ -761,36 +879,6 @@
         positionSubs();
     };
 
-    // Picture-in-picture only draws the browser's own text tracks, so the
-    // same cues are mirrored into one and shown only while in PiP. An LRM
-    // in front of each line keeps the browser's layout left-to-right, which
-    // is what the moved punctuation expects.
-    let pipTrack = null;
-    const pipCueKeys = new Set();
-    const ensurePipTrack = () => {
-        if (pipTrack || typeof video.addTextTrack !== 'function' || typeof VTTCue === 'undefined') return pipTrack;
-        pipTrack = video.addTextTrack('subtitles', 'Subtitles');
-        pipTrack.mode = document.pictureInPictureElement === video ? 'showing' : 'hidden';
-        return pipTrack;
-    };
-    const clearPipCues = () => {
-        if (!pipTrack) return;
-        Array.from(pipTrack.cues || []).forEach((c) => pipTrack.removeCue(c));
-        pipCueKeys.clear();
-    };
-    const syncPipCues = () => {
-        if (!ensurePipTrack()) return;
-        const offset = subPrefs.sync;
-        subCues.forEach((c) => {
-            const k = `${c.s}:${c.t}`;
-            if (pipCueKeys.has(k)) return;
-            pipCueKeys.add(k);
-            const text = displayLines([c.t]).map((l) => `‎${l}`).join('\n');
-            try { pipTrack.addCue(new VTTCue(c.s / 1000 + offset, c.e / 1000 + offset, text)); } catch { /* ignore */ }
-        });
-    };
-    video.addEventListener('enterpictureinpicture', () => { if (ensurePipTrack()) pipTrack.mode = 'showing'; });
-    video.addEventListener('leavepictureinpicture', () => { if (pipTrack) pipTrack.mode = 'hidden'; });
 
     const mergeCues = (incoming) => {
         const seen = new Set(subCues.map((c) => `${c.s}:${c.t}`));
@@ -800,7 +888,6 @@
             if (!seen.has(k)) { seen.add(k); subCues.push({ s: c.s, e: c.e, t: c.t }); }
         });
         subCues.sort((a, b) => a.s - b.s);
-        syncPipCues();
     };
 
     const loadSubWindow = async (idx) => {
@@ -828,7 +915,7 @@
             subWindows.set(idx, 'error');
             // Let a later timeupdate retry this window.
             setTimeout(() => { if (gen === subGeneration && subWindows.get(idx) === 'error') subWindows.delete(idx); }, 8000);
-            if (idx === Math.floor(video.currentTime / SUB_WINDOW_S)) toast("Couldn't load subtitles, retrying…");
+            if (idx === Math.floor(video.currentTime / SUB_WINDOW_S)) toast(t('subsRetry'));
         }
     };
 
@@ -866,7 +953,7 @@
         loadSubWindow(idx + 1);
         if (!subLoadingToastShown && subWindows.get(idx) === 'loading') {
             subLoadingToastShown = true;
-            toast('Loading subtitles…');
+            toast(t('subsLoading'));
         }
     };
 
@@ -879,7 +966,6 @@
         subTrack = trackNumber;
         subCues = [];
         subIndexed = false;
-        clearPipCues();
         subWindows = new Map();
         subLoadingToastShown = false;
         shownCueKey = '';
@@ -931,9 +1017,9 @@
         if (subtitleOptions) {
             subtitleOptions.innerHTML = '';
             if (!subtitleTracks.length) {
-                subtitleOptions.innerHTML = '<div class="sheet-empty">No embedded subtitles found.</div>';
+                subtitleOptions.innerHTML = `<div class="sheet-empty">${t('noSubs')}</div>`;
             } else {
-                const offBtn = optionWithLabels('Off');
+                const offBtn = optionWithLabels(t('off'));
                 if (subTrack == null) offBtn.classList.add('selected');
                 offBtn.addEventListener('click', () => {
                     selectSubtitle(null);
@@ -944,11 +1030,11 @@
 
                 subtitleTracks.forEach((track, index) => {
                     const lang = languageName(track.language);
-                    const btn = optionWithLabels(lang || track.name || `Track ${index + 1}`, lang ? track.name : null);
+                    const btn = optionWithLabels(lang || track.name || t('track', index + 1), lang ? track.name : null);
                     const usable = !track.codec || track.codec.startsWith('S_TEXT/');
                     if (!usable) {
                         btn.disabled = true;
-                        btn.title = 'Image-based subtitles (PGS/VobSub) can only be shown by an external player.';
+                        btn.title = t('imageSubs');
                     }
                     if (track.number === subTrack) btn.classList.add('selected');
                     btn.addEventListener('click', () => {
@@ -964,12 +1050,12 @@
         if (audioOptions) {
             audioOptions.innerHTML = '';
             if (audioTracks.length <= 1) {
-                audioOptions.innerHTML = '<div class="sheet-empty">Only one audio track.</div>';
+                audioOptions.innerHTML = `<div class="sheet-empty">${t('oneAudio')}</div>`;
             } else {
                 audioTracks.forEach((track, index) => {
-                    const row = optionWithLabels(languageName(track.language) || track.name || `Track ${index + 1}`, track.name);
+                    const row = optionWithLabels(languageName(track.language) || track.name || t('track', index + 1), track.name);
                     row.disabled = true;
-                    row.title = "In-browser audio switching isn't supported — download the file to pick a track in an external player.";
+                    row.title = t('audioNoSwitch');
                     audioOptions.appendChild(row);
                 });
             }
@@ -1027,7 +1113,7 @@
         subPrefs = { ...subPrefs, ...changes };
         saveSubPrefs();
         reflectSubPrefs();
-        if (syncChanged) { clearPipCues(); syncPipCues(); ensureSubWindows(); }
+        if (syncChanged) ensureSubWindows();
         shownCueKey = '';
         renderCues();
         positionSubs();
@@ -1074,7 +1160,8 @@
         sheet.addEventListener('pointerdown', (e) => {
             if (!e.target.closest('.sheet-handle, .sheet-head, .sheet-title')) return;
             if (e.target.closest('button')) return;
-            drag = { y: e.clientY, t: performance.now(), dy: 0, id: e.pointerId };
+            if (window.matchMedia('(min-width: 700px)').matches) return; // side panel: closes with X
+            drag = { y: e.clientY, time: performance.now(), dy: 0, id: e.pointerId };
             sheet.setPointerCapture?.(e.pointerId);
             sheet.style.transition = 'none';
         });
@@ -1085,9 +1172,9 @@
         });
         const end = () => {
             if (!drag) return;
-            const { dy, t } = drag;
+            const { dy, time } = drag;
             drag = null;
-            const fast = dy / Math.max(1, performance.now() - t) > 0.5;
+            const fast = dy / Math.max(1, performance.now() - time) > 0.5;
             sheet.style.transition = 'transform .2s ease';
             if (dy > 80 || (fast && dy > 20)) {
                 sheet.style.transform = 'translateY(110%)';

@@ -160,19 +160,19 @@
                 </button>
                 <button class="action-btn" id="sleepBtn">
                     <svg viewBox="0 0 24 24"><path d="M12 20a7 7 0 100-14 7 7 0 000 14zm0-16a9 9 0 110 18 9 9 0 010-18zm.5 4H11v6l5.2 3.15.8-1.24-4.5-2.7V8z"/></svg>
-                    <span>Sleep</span>
+                    <span data-i18n="sleep">Sleep</span>
                 </button>
                 <button class="action-btn" id="lockBtn">
                     <svg viewBox="0 0 24 24"><path d="M12 17a2 2 0 002-2 2 2 0 00-2-2 2 2 0 00-2 2 2 2 0 002 2zm6-9h-1V6a5 5 0 00-10 0v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2zm-6-3.8a2.8 2.8 0 012.8 2.8v2H9.2V6a2.8 2.8 0 012.8-2.8z"/></svg>
-                    <span>Lock</span>
+                    <span data-i18n="lock">Lock</span>
                 </button>
                 <button class="action-btn" id="tracksBtn">
                     <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6v-2zm0 4h8v2H6v-2zm10 0h2v2h-2v-2zm-6-4h8v2h-8v-2z"/></svg>
-                    <span>Subtitles</span>
+                    <span data-i18n="subtitles">Subtitles</span>
                 </button>
                 <button class="action-btn" id="openInBtn">
                     <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9.5 7.5v9l7-4.5-7-4.5z"/></svg>
-                    <span>Open In</span>
+                    <span data-i18n="openIn">Open In</span>
                 </button>
             </div>
         </div>
@@ -180,14 +180,14 @@
         <!-- Background message shown only if the stream fails to start -->
         <div class="player-background-message" id="bgMessage" hidden>
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9.5 7.5v9l7-4.5-7-4.5z"/></svg>
-            <span class="bg-msg-title">If video not playing</span>
-            <span class="bg-msg-sub">Use External Player</span>
+            <span class="bg-msg-title" data-i18n="notPlaying">If video not playing</span>
+            <span class="bg-msg-sub" data-i18n="useExternal">Use External Player</span>
         </div>
 
         <!-- Lock mode: everything above is pointer-blocked except this -->
         <button class="unlock-btn" id="unlockBtn" hidden aria-label="Unlock controls">
             <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/></svg>
-            <span>Tap to unlock</span>
+            <span data-i18n="tapUnlock">Tap to unlock</span>
         </button>
 
     <!-- Sheets + toasts live inside the stage so they still show while it is fullscreen -->
@@ -195,34 +195,43 @@
 
     <div class="sheet" id="speedSheet" hidden>
         <div class="sheet-handle"></div>
-        <h3 class="sheet-title">Playback Speed</h3>
+        <div class="sheet-head">
+            <button class="icon-btn sheet-head-btn sheet-close" data-i18n-aria="close" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+            <h3 class="sheet-title" data-i18n="speed">Playback Speed</h3>
+            
+        </div>
         <div class="sheet-options" id="speedOptions"></div>
     </div>
 
     <div class="sheet" id="sleepSheet" hidden>
         <div class="sheet-handle"></div>
-        <h3 class="sheet-title">Sleep Timer</h3>
+        <div class="sheet-head">
+            <button class="icon-btn sheet-head-btn sheet-close" data-i18n-aria="close" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+            <h3 class="sheet-title" data-i18n="sleepTimer">Sleep Timer</h3>
+            
+        </div>
         <div class="sheet-options" id="sleepOptions"></div>
     </div>
 
     <div class="sheet" id="tracksSheet" hidden>
         <div class="sheet-handle"></div>
         <div class="sheet-head">
-            <h3 class="sheet-title">Audio &amp; Subtitles</h3>
-            <button class="icon-btn sheet-head-btn" id="subStyleBtn" aria-label="Subtitle settings">
+            <button class="icon-btn sheet-head-btn sheet-close" data-i18n-aria="close" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+            <h3 class="sheet-title" data-i18n="audioSubs">Audio &amp; Subtitles</h3>
+            <button class="icon-btn sheet-head-btn" id="subStyleBtn" data-i18n-aria="subSettings" aria-label="Subtitle settings">
                 <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
             </button>
         </div>
         <div class="sheet-section">
-            <div class="sheet-section-label">Subtitles</div>
+            <div class="sheet-section-label" data-i18n="subtitles">Subtitles</div>
             <div class="sheet-options" id="subtitleOptions">
-                <div class="sheet-empty">No embedded subtitles found.</div>
+                <div class="sheet-empty" data-i18n="noSubs">No embedded subtitles found.</div>
             </div>
         </div>
         <div class="sheet-section">
-            <div class="sheet-section-label">Audio</div>
+            <div class="sheet-section-label" data-i18n="audio">Audio</div>
             <div class="sheet-options" id="audioOptions">
-                <div class="sheet-empty">Only one audio track.</div>
+                <div class="sheet-empty" data-i18n="oneAudio">Only one audio track.</div>
             </div>
         </div>
     </div>
@@ -233,21 +242,21 @@
             <button class="icon-btn sheet-head-btn" id="subStyleBack" aria-label="Back">
                 <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
             </button>
-            <h3 class="sheet-title">Subtitle Settings</h3>
+            <h3 class="sheet-title" data-i18n="subSettings">Subtitle Settings</h3>
             <button class="icon-btn sheet-head-btn" id="subStyleReset" aria-label="Reset">
                 <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 00-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0013 21a9 9 0 000-18z"/></svg>
             </button>
         </div>
         <div class="setting-row">
-            <div class="setting-label">Font size · <span id="subSizeVal">18</span></div>
+            <div class="setting-label"><span data-i18n="fontSize">Font size</span> · <span id="subSizeVal">18</span></div>
             <input type="range" class="setting-range" id="subSize" min="12" max="36" step="1" value="18">
         </div>
         <div class="setting-row">
-            <div class="setting-label">Position · <span id="subPosVal">0</span></div>
+            <div class="setting-label"><span data-i18n="position">Position</span> · <span id="subPosVal">0</span></div>
             <input type="range" class="setting-range" id="subPos" min="0" max="50" step="1" value="0">
         </div>
         <div class="setting-row">
-            <div class="setting-label">Subtitle sync · <span id="subSyncVal">0s</span></div>
+            <div class="setting-label"><span data-i18n="subSync">Subtitle sync</span> · <span id="subSyncVal">0s</span></div>
             <div class="setting-stepper">
                 <button class="step-btn" id="subSyncMinus" aria-label="Earlier">&minus;</button>
                 <input type="range" class="setting-range" id="subSync" min="-10" max="10" step="0.1" value="0">
@@ -255,18 +264,22 @@
             </div>
         </div>
         <div class="setting-row">
-            <div class="setting-label">Style</div>
+            <div class="setting-label" data-i18n="style">Style</div>
             <div class="segmented" id="subStyleSeg">
-                <button data-style="outline">Outline</button>
-                <button data-style="shadow">Shadow</button>
-                <button data-style="box">Background</button>
+                <button data-style="outline" data-i18n="outline">Outline</button>
+                <button data-style="shadow" data-i18n="shadow">Shadow</button>
+                <button data-style="box" data-i18n="background">Background</button>
             </div>
         </div>
     </div>
 
     <div class="sheet" id="openInSheet" hidden>
         <div class="sheet-handle"></div>
-        <h3 class="sheet-title">Open In External Player</h3>
+        <div class="sheet-head">
+            <button class="icon-btn sheet-head-btn sheet-close" data-i18n-aria="close" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+            <h3 class="sheet-title" data-i18n="openExternal">Open In External Player</h3>
+            
+        </div>
         <div class="player-group" id="androidGroup">
             <div class="group-label">Android</div>
             <div class="player-grid">
@@ -289,7 +302,7 @@
             </div>
         </div>
         <div class="player-group" id="desktopGroup">
-            <div class="group-label">Desktop</div>
+            <div class="group-label" data-i18n="desktop">Desktop</div>
             <div class="player-grid">
                 <a href="vlc://{{ src|safe }}" class="player-link">VLC</a>
                 <a href="potplayer://{{ src|safe }}" class="player-link" data-os="windows">PotPlayer</a>
@@ -301,6 +314,12 @@
 
     <div class="toast-stack" id="toastStack" aria-live="polite"></div>
     </div>
+                <!-- Shown in the video's place while it plays in a floating window -->
+                <div class="pip-placeholder" id="pipPlaceholder" hidden>
+                    <svg viewBox="0 0 24 24"><path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.98h18v14.03z"/></svg>
+                    <span class="pip-text" data-i18n="pipActive">Playing in a floating window</span>
+                    <button class="pip-return" id="pipReturnBtn" data-i18n="pipReturn">Bring it back here</button>
+                </div>
             </div>
         </section>
 
@@ -309,17 +328,17 @@
             <div class="command-glass">
                 <a href="{{ src|safe }}" download="{{ file_name }}" class="cmd-btn primary" id="pageDownloadBtn">
                     <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    <span>Download</span>
+                    <span data-i18n="download">Download</span>
                 </a>
                 <div class="cmd-divider"></div>
                 <button class="cmd-btn" id="pageCopyBtn">
                     <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                    <span>Copy Link</span>
+                    <span data-i18n="copyLink">Copy Link</span>
                 </button>
                 <div class="cmd-divider"></div>
                 <button class="cmd-btn" id="pageOpenInBtn">
                     <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9.5 7.5v9l7-4.5-7-4.5z"/></svg>
-                    <span>Open In</span>
+                    <span data-i18n="openIn">Open In</span>
                 </button>
             </div>
         </nav>

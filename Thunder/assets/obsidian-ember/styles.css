@@ -2009,14 +2009,25 @@ svg[hidden] {
     padding: var(--space-sm) var(--space-md);
 }
 
+/* Wide screens (incl. phones in landscape): a half-screen side panel,
+   full height, like the app's track/settings panels. */
 @media (min-width: 700px) {
     .sheet {
+        top: 0;
+        bottom: 0;
         left: auto;
-        right: var(--space-lg);
-        bottom: var(--space-lg);
-        width: 360px;
-        border-radius: 16px;
-        max-height: 60vh;
+        right: 0;
+        width: min(560px, max(340px, 50vw));
+        max-height: none;
+        border-top: none;
+        border-left: 1px solid var(--glass-border);
+        border-radius: 20px 0 0 20px;
+        padding-top: max(var(--space-md), env(safe-area-inset-top));
+        box-shadow: -10px 0 40px -10px rgba(0,0,0,.6);
+    }
+
+    .sheet .sheet-handle {
+        display: none;
     }
 }
 /* Page command bar: keep the labels on small screens too - icon-only
@@ -2201,6 +2212,7 @@ svg[hidden] {
 }
 
 .setting-range {
+    direction: ltr;
     width: 100%;
     appearance: none;
     -webkit-appearance: none;
@@ -2227,6 +2239,7 @@ svg[hidden] {
 }
 
 .setting-stepper {
+    direction: ltr;
     display: flex;
     align-items: center;
     gap: var(--space-sm);
@@ -2267,4 +2280,91 @@ svg[hidden] {
 .segmented button.selected {
     background: var(--ember);
     color: #fff;
+}
+
+/* Sheet header: close (X) on the left, the title, the action (gear /
+   reset) on the right - in Hebrew too, as in the app. */
+.sheet-head {
+    direction: ltr;
+}
+
+.sheet[dir="rtl"] .sheet-head .sheet-title {
+    direction: rtl;
+    text-align: right;
+}
+
+.sheet[dir="rtl"] .sheet-option {
+    text-align: right;
+}
+
+.sheet-close svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* In the video's place while it plays in a floating window */
+.pip-placeholder {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: #000;
+    color: var(--pearl);
+    text-align: center;
+}
+
+.pip-placeholder[hidden] {
+    display: none;
+}
+
+.pip-placeholder svg {
+    width: 40px;
+    height: 40px;
+    fill: var(--ember);
+}
+
+.pip-text {
+    font-family: var(--font-display);
+    font-size: .9375rem;
+}
+
+.pip-return {
+    margin-top: var(--space-xs);
+    padding: 10px 22px;
+    border: none;
+    border-radius: 999px;
+    background: var(--ember);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: .875rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* The player inside the desktop floating window fills it */
+html.pip-doc,
+html.pip-doc body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: #000;
+    overflow: hidden;
+}
+
+html.pip-doc .player-stage {
+    width: 100vw;
+    height: 100vh;
+}
+
+/* With a side panel open, keep subtitles (and the settings sample) in the
+   part of the picture that's still visible. */
+@media (min-width: 700px) {
+    .player-stage:has(.sheet:not([hidden])) .sub-overlay {
+        right: calc(min(560px, max(340px, 50vw)) + 2%);
+    }
 }
