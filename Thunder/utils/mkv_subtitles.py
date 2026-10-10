@@ -3,19 +3,14 @@
 # Pure-Python Matroska (EBML) reader for embedded text subtitle tracks.
 #
 # There is no ffmpeg/mkvextract on this project's typical host (Heroku's
-# standard buildpack has no apt-get), so this walks the container structure
-# itself: read the Tracks list to find subtitle streams, then walk Clusters
-# sequentially pulling out the SimpleBlock/BlockGroup payloads that belong to
-# the requested track, and emit them as WebVTT.
+# standard buildpack has no apt-get), so this reads the container itself:
+# the Tracks list to find subtitle streams, and the Cues index to jump
+# straight to the subtitle blocks of a given time window (see "Indexed,
+# windowed subtitle extraction" below).
 #
 # Scope: text-based subtitle codecs only (S_TEXT/UTF8 "SRT", S_TEXT/ASS,
 # S_TEXT/SSA, S_TEXT/WEBVTT). Bitmap subtitle codecs (S_HDMV/PGS, S_VOBSUB)
-# carry images, not text, and can't become a WebVTT file - they're skipped.
-#
-# There's no subtitle-only index in Matroska, so finding every cue means
-# reading through the whole Clusters region once - the same amount of work
-# ffmpeg would do for the same file. That cost is paid once per file and
-# cached (see callers in Thunder/server/stream_routes.py), not per viewer.
+# carry images, not text - they're skipped.
 
 import asyncio
 import re
@@ -60,18 +55,6 @@ TRACK_TYPE_AUDIO = 2
 TRACK_TYPE_SUBTITLE = 17
 
 TEXT_SUBTITLE_CODECS = {"S_TEXT/UTF8", "S_TEXT/ASS", "S_TEXT/SSA", "S_TEXT/WEBVTT"}
-
-# Elements whose children we want to step into while scanning; anything else
-# with an unknown/irrelevant ID is skipped over as a single opaque blob.
-_MASTER_IDS = {
-    ID_SEGMENT, ID_SEEK_HEAD, ID_SEEK, ID_INFO, ID_TRACKS, ID_TRACK_ENTRY,
-    ID_CONTENT_ENCODINGS, ID_CONTENT_ENCODING, ID_CONTENT_COMPRESSION,
-    ID_CLUSTER, ID_BLOCK_GROUP,
-}
-
-DEFAULT_MAX_SCAN_BYTES = 450 * 1024 * 1024
-DEFAULT_SCAN_TIMEOUT = 90
-
 
 class _ParseGiveUp(Exception):
     """Internal: stop parsing cleanly (cap/timeout/EOF), keep what we have."""
@@ -162,54 +145,7 @@ def _parse_uint(data: bytes) -> int:
     return int.from_bytes(data, "big", signed=False) if data else 0
 
 
-# ---- Track discovery ---------------------------------------------------
-
-async def probe_tracks(
-    chunk_source,
-    *,
-    max_scan_bytes: int = 8 * 1024 * 1024,
-) -> List[Dict[str, Any]]:
-    """Reads just far enough to parse the Tracks element (near the start of
-    any properly muxed file) and returns track metadata dicts:
-    {number, type: 'video'|'audio'|'subtitle'|'other', codec, language, name}.
-    Returns [] if this isn't a Matroska file or Tracks wasn't found in range.
-    """
-    reader = _AsyncByteReader(chunk_source)
-    tracks: List[Dict[str, Any]] = []
-    try:
-        eid, header_size = await _read_element_header(reader)
-        if eid != ID_EBML_HEADER:
-            return []
-        await reader.skip(header_size)
-
-        seg_id, _seg_size = await _read_element_header(reader)
-        if seg_id != ID_SEGMENT:
-            return []
-
-        while reader.position < max_scan_bytes:
-            eid, size = await _read_element_header(reader)
-            if eid == ID_TRACKS:
-                tracks = await _parse_tracks(reader, size)
-                break
-            if eid == ID_CLUSTER:
-                # Tracks always precedes Clusters in a streamable mux; if we
-                # hit a Cluster first there's nothing more to look for here.
-                break
-            await reader.skip(size)
-    except _ParseGiveUp:
-        pass
-    except Exception as e:
-        logger.debug(f"mkv_subtitles.probe_tracks: {e}", exc_info=True)
-    return tracks
-
-
-async def _skip_element_header_payload(reader: _AsyncByteReader, eid: int) -> None:
-    # Used only right after reading the EBML header's own header; re-read its
-    # size vint (we already consumed id+size as a pair in _read_element_header
-    # for the header itself, so this helper is intentionally unused for that
-    # path - kept as a no-op placeholder for clarity).
-    return None
-
+# ---- Track list ---------------------------------------------------------
 
 async def _parse_tracks(reader: _AsyncByteReader, tracks_size: int) -> List[Dict[str, Any]]:
     end_pos = reader.position + tracks_size
@@ -278,9 +214,6 @@ async def _has_zlib_compression(reader: _AsyncByteReader, size: int) -> bool:
 # ---- Subtitle cue extraction -------------------------------------------
 
 _ASS_OVERRIDE = re.compile(r"\{[^}]*\}")
-_WEBVTT_UNSAFE_ARROW = re.compile(r"-->")
-
-
 def _ass_dialogue_text(payload: str) -> Optional[str]:
     # Matroska stores ASS/SSA payload as the Dialogue line's fields after
     # ReadOrder, i.e. "Layer,Style,Name,MarginL,MarginR,MarginV,Effect,Text".
@@ -293,15 +226,6 @@ def _ass_dialogue_text(payload: str) -> Optional[str]:
     return text.strip() or None
 
 
-def _format_timestamp(ms: int) -> str:
-    if ms < 0:
-        ms = 0
-    hours, ms = divmod(ms, 3_600_000)
-    minutes, ms = divmod(ms, 60_000)
-    seconds, ms = divmod(ms, 1000)
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}.{ms:03d}"
-
-
 class _Cue:
     __slots__ = ("start_ms", "end_ms", "text")
 
@@ -309,89 +233,6 @@ class _Cue:
         self.start_ms = start_ms
         self.end_ms = end_ms
         self.text = text
-
-
-async def extract_subtitle_vtt(
-    chunk_source,
-    *,
-    track_number: int,
-    max_scan_bytes: int = DEFAULT_MAX_SCAN_BYTES,
-    timeout_seconds: float = DEFAULT_SCAN_TIMEOUT,
-) -> Optional[str]:
-    """Walks the Segment's Clusters pulling out every block belonging to
-    track_number, and returns a complete WebVTT document, or None if nothing
-    was found / the file isn't parseable Matroska.
-    """
-    reader = _AsyncByteReader(chunk_source)
-    deadline = time.monotonic() + timeout_seconds
-    codec = "S_TEXT/UTF8"
-    use_zlib = False
-    cues: List[_Cue] = []
-
-    try:
-        eid, header_size = await _read_element_header(reader)
-        if eid != ID_EBML_HEADER:
-            return None
-        await reader.skip(header_size)
-        seg_id, _seg_size = await _read_element_header(reader)
-        if seg_id != ID_SEGMENT:
-            return None
-
-        timecode_scale = 1_000_000  # ns per Matroska tick, Matroska default
-        cluster_timecode = 0
-
-        while reader.position < max_scan_bytes:
-            if time.monotonic() > deadline:
-                logger.debug("mkv_subtitles: scan timed out, returning partial result")
-                break
-
-            eid, size = await _read_element_header(reader)
-
-            if eid == ID_INFO:
-                timecode_scale = await _parse_info(reader, size, timecode_scale)
-            elif eid == ID_TRACKS:
-                tracks = await _parse_tracks(reader, size)
-                target = next((t for t in tracks if t["number"] == track_number), None)
-                if target is None:
-                    return None
-                if target["codec"] not in TEXT_SUBTITLE_CODECS:
-                    return None
-                codec = target["codec"]
-                use_zlib = bool(target.get("zlib"))
-            elif eid == ID_CLUSTER:
-                cluster_end = reader.position + size
-                cluster_timecode = 0
-                while reader.position < cluster_end:
-                    cid, csize = await _read_element_header(reader)
-                    if cid == ID_TIMECODE:
-                        cluster_timecode = _parse_uint(await reader.read(csize))
-                    elif cid == ID_SIMPLE_BLOCK:
-                        block = await reader.read(csize)
-                        cue = _decode_block(
-                            block, track_number, cluster_timecode, timecode_scale,
-                            codec, use_zlib, default_duration_ms=2000,
-                        )
-                        if cue:
-                            cues.append(cue)
-                    elif cid == ID_BLOCK_GROUP:
-                        cue = await _parse_block_group(
-                            reader, csize, track_number, cluster_timecode,
-                            timecode_scale, codec, use_zlib,
-                        )
-                        if cue:
-                            cues.append(cue)
-                    else:
-                        await reader.skip(csize)
-            else:
-                await reader.skip(size)
-    except _ParseGiveUp:
-        pass
-    except Exception as e:
-        logger.debug(f"mkv_subtitles.extract_subtitle_vtt: {e}", exc_info=True)
-
-    if not cues:
-        return None
-    return _render_vtt(cues)
 
 
 async def _parse_info(reader: _AsyncByteReader, size: int, default_scale: int) -> int:
@@ -486,20 +327,384 @@ def _read_vint_from_bytes(data: bytes, pos: int):
     return value, length
 
 
-def _render_vtt(cues: List["_Cue"]) -> str:
-    cues.sort(key=lambda c: c.start_ms)
-    # A block only carries its own start time; if nothing (duration, next
-    # cue) narrows it down we fall back to a flat length, which can make
-    # adjacent cues overlap slightly - trimming each to the next cue's start
-    # keeps overlapping captions from stacking on screen.
-    for i in range(len(cues) - 1):
-        if cues[i].end_ms > cues[i + 1].start_ms:
-            cues[i].end_ms = max(cues[i].start_ms + 200, cues[i + 1].start_ms)
+# ---- Indexed, windowed subtitle extraction ---------------------------------
+#
+# Reading every Cluster to collect one subtitle track means streaming the
+# whole movie from Telegram before a single line can be shown - minutes for
+# a feature film, far past Heroku's 30 s request limit. Instead:
+#
+#   1. Read the file head once (SeekHead/Info/Tracks) and the Cues index
+#      (usually a few hundred KB at the end of the file).
+#   2. For a time window, read only the bytes of the subtitle blocks the
+#      index points at (mkvmerge and ffmpeg both index every subtitle block
+#      with CueClusterPosition + CueRelativePosition).
+#   3. If a file doesn't index its subtitle blocks, start at the indexed
+#      cluster nearest the window and scan just that window's clusters.
+#
+# All reads go through `fetch(chunk_index) -> bytes`, one 1 MiB chunk at a
+# time (Telegram's download granularity), supplied by the caller.
 
-    lines = ["WEBVTT", ""]
-    for cue in cues:
-        text = _WEBVTT_UNSAFE_ARROW.sub("- -&gt;", cue.text)
-        lines.append(f"{_format_timestamp(cue.start_ms)} --> {_format_timestamp(cue.end_ms)}")
-        lines.append(text)
-        lines.append("")
-    return "\n".join(lines)
+CHUNK_SIZE = 1024 * 1024
+
+ID_CUE_POINT = 0xBB
+ID_CUE_TIME = 0xB3
+ID_CUE_TRACK_POSITIONS = 0xB7
+ID_CUE_TRACK = 0xF7
+ID_CUE_CLUSTER_POSITION = 0xF1
+ID_CUE_RELATIVE_POSITION = 0xF0
+ID_CUE_DURATION = 0xB2
+
+WINDOW_MS = 60_000
+_LOOKBEHIND_MS = 10_000
+_HEAD_MAX_CHUNKS = 48
+_CUES_MAX_CHUNKS = 16
+_LINEAR_MAX_BYTES = 160 * CHUNK_SIZE
+_WINDOW_TIMEOUT = 22.0
+_FETCH_CONCURRENCY = 6
+
+
+class MkvIndex:
+    __slots__ = ("segment_start", "timecode_scale", "tracks", "cue_points", "first_cluster")
+
+    def __init__(self):
+        self.segment_start = 0
+        self.timecode_scale = 1_000_000
+        self.tracks: List[Dict[str, Any]] = []
+        # track number -> sorted [(time_ticks, cluster_pos, rel_pos|None, duration_ticks|None)]
+        self.cue_points: Dict[int, List[tuple]] = {}
+        self.first_cluster: Optional[int] = None  # relative to segment_start
+
+    def ticks_to_ms(self, ticks: int) -> int:
+        return ticks * self.timecode_scale // 1_000_000
+
+    def ms_to_ticks(self, ms: int) -> int:
+        return ms * 1_000_000 // self.timecode_scale
+
+
+async def _chunks_from(fetch, abs_pos: int, max_chunks: int):
+    idx, skip = divmod(abs_pos, CHUNK_SIZE)
+    for n in range(max_chunks):
+        data = await fetch(idx + n)
+        if not data:
+            return
+        full = len(data)
+        if n == 0 and skip:
+            data = data[skip:]
+        if data:
+            yield data
+        if full < CHUNK_SIZE:
+            return
+
+
+async def read_range(fetch, start: int, length: int) -> bytes:
+    out = bytearray()
+    pos = start
+    end = start + length
+    while pos < end:
+        idx, off = divmod(pos, CHUNK_SIZE)
+        data = await fetch(idx)
+        if not data or off >= len(data):
+            break
+        take = data[off:off + (end - pos)]
+        out += take
+        pos += len(take)
+    return bytes(out)
+
+
+def _vint_len(first: int) -> int:
+    if first == 0:
+        raise ValueError("Invalid VINT")
+    length, mask = 1, 0x80
+    while not (first & mask):
+        length += 1
+        mask >>= 1
+    return length
+
+
+def _parse_header_bytes(data: bytes, pos: int = 0):
+    """(element_id, size, header_length) from raw bytes."""
+    id_len = _vint_len(data[pos])
+    element_id = int.from_bytes(data[pos:pos + id_len], "big")
+    size, size_len = _read_vint_from_bytes(data, pos + id_len)
+    return element_id, size, id_len + size_len
+
+
+async def _parse_seek_head(reader: _AsyncByteReader, size: int) -> Dict[int, int]:
+    end_pos = reader.position + size
+    found: Dict[int, int] = {}
+    while reader.position < end_pos:
+        eid, esize = await _read_element_header(reader)
+        if eid != ID_SEEK:
+            await reader.skip(esize)
+            continue
+        seek_end = reader.position + esize
+        seek_id, seek_pos = None, None
+        while reader.position < seek_end:
+            cid, csize = await _read_element_header(reader)
+            raw = await reader.read(csize)
+            if cid == ID_SEEK_ID:
+                seek_id = int.from_bytes(raw, "big")
+            elif cid == ID_SEEK_POSITION:
+                seek_pos = _parse_uint(raw)
+        if seek_id is not None and seek_pos is not None:
+            found[seek_id] = seek_pos
+    return found
+
+
+async def _parse_cues(reader: _AsyncByteReader, size: int, index: MkvIndex) -> None:
+    end_pos = reader.position + size
+    while reader.position < end_pos:
+        eid, esize = await _read_element_header(reader)
+        if eid != ID_CUE_POINT:
+            await reader.skip(esize)
+            continue
+        data = await reader.read(esize)
+        cue_time = None
+        positions = []
+        pos = 0
+        while pos < len(data):
+            cid, csize, hlen = _parse_header_bytes(data, pos)
+            body = data[pos + hlen:pos + hlen + csize]
+            pos += hlen + csize
+            if cid == ID_CUE_TIME:
+                cue_time = _parse_uint(body)
+            elif cid == ID_CUE_TRACK_POSITIONS:
+                track = cluster = rel = dur = None
+                p = 0
+                while p < len(body):
+                    tid, tsize, thlen = _parse_header_bytes(body, p)
+                    val = _parse_uint(body[p + thlen:p + thlen + tsize])
+                    p += thlen + tsize
+                    if tid == ID_CUE_TRACK:
+                        track = val
+                    elif tid == ID_CUE_CLUSTER_POSITION:
+                        cluster = val
+                    elif tid == ID_CUE_RELATIVE_POSITION:
+                        rel = val
+                    elif tid == ID_CUE_DURATION:
+                        dur = val
+                if track is not None and cluster is not None:
+                    positions.append((track, cluster, rel, dur))
+        if cue_time is None:
+            continue
+        for track, cluster, rel, dur in positions:
+            index.cue_points.setdefault(track, []).append((cue_time, cluster, rel, dur))
+
+
+async def load_index(fetch) -> Optional[MkvIndex]:
+    index = MkvIndex()
+    reader = _AsyncByteReader(_chunks_from(fetch, 0, _HEAD_MAX_CHUNKS))
+    seek: Dict[int, int] = {}
+    cues_parsed = False
+    try:
+        eid, header_size = await _read_element_header(reader)
+        if eid != ID_EBML_HEADER:
+            return None
+        await reader.skip(header_size)
+        seg_id, _ = await _read_element_header(reader)
+        if seg_id != ID_SEGMENT:
+            return None
+        index.segment_start = reader.position
+        while True:
+            elem_pos = reader.position - index.segment_start
+            eid, size = await _read_element_header(reader)
+            if eid == ID_SEEK_HEAD:
+                seek.update(await _parse_seek_head(reader, size))
+            elif eid == ID_INFO:
+                index.timecode_scale = await _parse_info(reader, size, index.timecode_scale)
+            elif eid == ID_TRACKS:
+                index.tracks = await _parse_tracks(reader, size)
+            elif eid == ID_CUES:
+                await _parse_cues(reader, size, index)
+                cues_parsed = True
+            elif eid == ID_CLUSTER:
+                index.first_cluster = elem_pos
+                break
+            else:
+                await reader.skip(size)
+    except _ParseGiveUp:
+        pass
+    except Exception as e:
+        logger.debug(f"mkv_subtitles.load_index head: {e}", exc_info=True)
+    if not index.tracks:
+        return None
+
+    cues_pos = seek.get(ID_CUES)
+    if not cues_parsed and cues_pos is not None:
+        try:
+            cue_reader = _AsyncByteReader(
+                _chunks_from(fetch, index.segment_start + cues_pos, _CUES_MAX_CHUNKS))
+            eid, size = await _read_element_header(cue_reader)
+            if eid == ID_CUES:
+                await _parse_cues(cue_reader, size, index)
+        except _ParseGiveUp:
+            pass
+        except Exception as e:
+            logger.debug(f"mkv_subtitles.load_index cues: {e}", exc_info=True)
+    for points in index.cue_points.values():
+        points.sort(key=lambda p: p[0])
+    return index
+
+
+def _block_text(block: bytes, wanted_track: int, codec: str, use_zlib: bool) -> Optional[str]:
+    try:
+        track_num, consumed = _read_vint_from_bytes(block, 0)
+        if track_num != wanted_track:
+            return None
+        flags = block[consumed + 2]
+        if (flags >> 1) & 0x03:
+            return None
+        payload = block[consumed + 3:]
+        if use_zlib:
+            try:
+                payload = zlib.decompress(payload)
+            except Exception:
+                pass
+        if codec in ("S_TEXT/ASS", "S_TEXT/SSA"):
+            return _ass_dialogue_text(payload.decode("utf-8", "replace"))
+        return payload.decode("utf-8", "replace").strip() or None
+    except Exception:
+        return None
+
+
+async def _read_indexed_cue(fetch, index: MkvIndex, point: tuple, track: Dict[str, Any]) -> Optional["_Cue"]:
+    cue_time, cluster_pos, rel_pos, cue_dur = point
+    cluster_abs = index.segment_start + cluster_pos
+    head = await read_range(fetch, cluster_abs, 12)
+    cid, _csize, chlen = _parse_header_bytes(head)
+    if cid != ID_CLUSTER:
+        return None
+    block_abs = cluster_abs + chlen + rel_pos
+    bhead = await read_range(fetch, block_abs, 12)
+    bid, bsize, bhlen = _parse_header_bytes(bhead)
+    if bsize > 256 * 1024:
+        return None
+    body = await read_range(fetch, block_abs + bhlen, bsize)
+    duration_ticks = cue_dur
+    if bid == ID_SIMPLE_BLOCK:
+        block = body
+    elif bid == ID_BLOCK_GROUP:
+        block = None
+        p = 0
+        while p < len(body):
+            gid, gsize, ghlen = _parse_header_bytes(body, p)
+            val = body[p + ghlen:p + ghlen + gsize]
+            p += ghlen + gsize
+            if gid == ID_BLOCK:
+                block = val
+            elif gid == ID_BLOCK_DURATION:
+                duration_ticks = _parse_uint(val)
+        if block is None:
+            return None
+    else:
+        return None
+    text = _block_text(block, track["number"], track["codec"], bool(track.get("zlib")))
+    if not text:
+        return None
+    start_ms = index.ticks_to_ms(cue_time)
+    end_ms = start_ms + (index.ticks_to_ms(duration_ticks) if duration_ticks else 0)
+    return _Cue(start_ms, end_ms, text)
+
+
+async def _scan_window_linear(fetch, index: MkvIndex, track: Dict[str, Any],
+                              start_ms: int, end_ms: int, deadline: float) -> List["_Cue"]:
+    # Nearest indexed cluster at or before the window start, from any track.
+    target = index.ms_to_ticks(max(0, start_ms - _LOOKBEHIND_MS))
+    begin = index.first_cluster
+    for points in index.cue_points.values():
+        for t, cluster, _rel, _dur in points:
+            if t <= target and (begin is None or cluster > begin):
+                begin = cluster
+            elif t > target:
+                break
+    if begin is None:
+        return []
+    cues: List[_Cue] = []
+    end_ticks = index.ms_to_ticks(end_ms)
+    reader = _AsyncByteReader(_chunks_from(
+        fetch, index.segment_start + begin, _LINEAR_MAX_BYTES // CHUNK_SIZE))
+    try:
+        while time.monotonic() < deadline:
+            eid, size = await _read_element_header(reader)
+            if eid != ID_CLUSTER:
+                await reader.skip(size)
+                continue
+            cluster_end = reader.position + size
+            cluster_tc = 0
+            while reader.position < cluster_end:
+                cid, csize = await _read_element_header(reader)
+                if cid == ID_TIMECODE:
+                    cluster_tc = _parse_uint(await reader.read(csize))
+                    if cluster_tc > end_ticks:
+                        return cues
+                elif cid == ID_SIMPLE_BLOCK:
+                    cue = _decode_block(await reader.read(csize), track["number"], cluster_tc,
+                                        index.timecode_scale, track["codec"], bool(track.get("zlib")),
+                                        default_duration_ms=0)
+                    if cue:
+                        cue.end_ms = cue.start_ms  # SimpleBlock carries no duration
+                        cues.append(cue)
+                elif cid == ID_BLOCK_GROUP:
+                    cue = await _parse_block_group(reader, csize, track["number"], cluster_tc,
+                                                   index.timecode_scale, track["codec"],
+                                                   bool(track.get("zlib")))
+                    if cue:
+                        cues.append(cue)
+                else:
+                    await reader.skip(csize)
+    except _ParseGiveUp:
+        pass
+    except Exception as e:
+        logger.debug(f"mkv_subtitles linear window: {e}", exc_info=True)
+    return cues
+
+
+async def extract_subtitle_window(fetch, index: MkvIndex, track_number: int,
+                                  start_ms: int, end_ms: int) -> Optional[List[Dict[str, Any]]]:
+    """Cues of one text subtitle track overlapping [start_ms, end_ms), as
+    [{"s": ms, "e": ms, "t": text}] sorted by start. None if the track isn't
+    a text subtitle track in this file."""
+    track = next((t for t in index.tracks if t["number"] == track_number), None)
+    if track is None or track.get("codec") not in TEXT_SUBTITLE_CODECS:
+        return None
+    deadline = time.monotonic() + _WINDOW_TIMEOUT
+    lo = index.ms_to_ticks(max(0, start_ms - _LOOKBEHIND_MS))
+    hi = index.ms_to_ticks(end_ms)
+    points = [p for p in index.cue_points.get(track_number, []) if lo <= p[0] < hi]
+    indexed = [p for p in points if p[2] is not None]
+
+    cues: List[_Cue] = []
+    if indexed:
+        sem = asyncio.Semaphore(_FETCH_CONCURRENCY)
+
+        async def one(p):
+            async with sem:
+                try:
+                    return await _read_indexed_cue(fetch, index, p, track)
+                except Exception as e:
+                    logger.debug(f"mkv_subtitles indexed cue: {e}", exc_info=True)
+                    return None
+
+        try:
+            results = await asyncio.wait_for(
+                asyncio.gather(*(one(p) for p in indexed)),
+                timeout=max(1.0, deadline - time.monotonic()))
+            cues = [c for c in results if c]
+        except asyncio.TimeoutError:
+            cues = []
+    if not cues and not indexed:
+        cues = await _scan_window_linear(fetch, index, track, start_ms, end_ms, deadline)
+
+    cues.sort(key=lambda c: c.start_ms)
+    for i, cue in enumerate(cues):
+        nxt = cues[i + 1].start_ms if i + 1 < len(cues) else None
+        if cue.end_ms <= cue.start_ms:
+            cue.end_ms = cue.start_ms + 4000
+            if nxt is not None:
+                cue.end_ms = min(cue.end_ms, max(cue.start_ms + 500, nxt))
+        elif nxt is not None and cue.end_ms > nxt:
+            cue.end_ms = max(cue.start_ms + 200, nxt)
+    return [
+        {"s": c.start_ms, "e": c.end_ms, "t": c.text}
+        for c in cues if c.end_ms > start_ms and c.start_ms < end_ms
+    ]

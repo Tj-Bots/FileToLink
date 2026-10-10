@@ -51,7 +51,6 @@
     const lockBtn = document.getElementById('lockBtn');
     const unlockBtn = document.getElementById('unlockBtn');
     const tracksBtn = document.getElementById('tracksBtn');
-    const tracksLabel = document.getElementById('tracksLabel');
     const openInBtn = document.getElementById('openInBtn');
 
     const sheetBackdrop = document.getElementById('sheetBackdrop');
@@ -289,15 +288,135 @@
         }, 3200);
     };
 
-    tapLayer?.addEventListener('click', () => {
-        if (stage?.hasAttribute('data-hidden') || stage?.getAttribute('data-hidden') === '') {
-            showControls();
-        } else {
-            togglePlay();
-            stage?.setAttribute('data-hidden', '');
-            clearTimeout(hideTimer);
+    const hideControlsNow = () => {
+        stage?.setAttribute('data-hidden', '');
+        clearTimeout(hideTimer);
+    };
+
+    // ═══════════════════════════════════════════
+    // VIDEO GESTURES (on the tap layer)
+    //   tap               show / hide the controls (never pauses)
+    //   double-tap sides  -10s / +10s, further taps keep adding
+    //   double-tap middle play / pause
+    //   long-press        left half 1.5x, right half 2x, while held
+    // ═══════════════════════════════════════════
+    const boostBadge = document.getElementById('boostBadge');
+    const boostLabel = document.getElementById('boostLabel');
+    const DOUBLE_TAP_MS = 280;
+    const LONG_PRESS_MS = 450;
+
+    let press = null;
+    let pressTimer = null;
+    let boosting = false;
+    let rateBeforeBoost = 1;
+    let lastTap = null;
+    let singleTapTimer = null;
+    let seekChain = null;
+
+    const tapZone = (x) => {
+        const r = stage.getBoundingClientRect();
+        const f = (x - r.left) / r.width;
+        return f < 1 / 3 ? 'left' : f > 2 / 3 ? 'right' : 'center';
+    };
+
+    const sideFlash = (zone) => {
+        if (!stage) return;
+        stage.querySelectorAll(`.side-seek.${zone}`).forEach((el) => el.remove());
+        const el = document.createElement('div');
+        el.className = `side-seek ${zone}`;
+        const label = document.createElement('span');
+        label.textContent = zone === 'left' ? '« 10s' : '10s »';
+        el.appendChild(label);
+        stage.appendChild(el);
+        setTimeout(() => el.remove(), 650);
+    };
+
+    const startBoost = (rate) => {
+        boosting = true;
+        rateBeforeBoost = video.playbackRate || 1;
+        video.playbackRate = rate;
+        if (boostLabel) boostLabel.textContent = `${rate}x`;
+        setHidden(boostBadge, false);
+        if (video.paused) video.play()?.catch?.(() => {});
+        hideControlsNow();
+    };
+
+    const stopBoost = () => {
+        if (!boosting) return;
+        boosting = false;
+        video.playbackRate = rateBeforeBoost;
+        setHidden(boostBadge, true);
+    };
+
+    const handleTap = (x) => {
+        const now = performance.now();
+        const zone = tapZone(x);
+        if (seekChain && now < seekChain.until && zone === seekChain.zone) {
+            seekChain.until = now + 600;
+            seekBy(zone === 'left' ? -10 : 10);
+            sideFlash(zone);
+            return;
+        }
+        if (lastTap && now - lastTap.t < DOUBLE_TAP_MS && zone === lastTap.zone) {
+            clearTimeout(singleTapTimer);
+            lastTap = null;
+            if (zone === 'center') {
+                togglePlay();
+                showControls();
+            } else {
+                seekBy(zone === 'left' ? -10 : 10);
+                sideFlash(zone);
+                seekChain = { zone, until: now + 600 };
+            }
+            return;
+        }
+        seekChain = null;
+        lastTap = { t: now, zone };
+        clearTimeout(singleTapTimer);
+        singleTapTimer = setTimeout(() => {
+            lastTap = null;
+            if (stage?.hasAttribute('data-hidden')) showControls();
+            else hideControlsNow();
+        }, DOUBLE_TAP_MS);
+    };
+
+    tapLayer?.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        press = { x: e.clientX, y: e.clientY };
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(() => {
+            const r = stage.getBoundingClientRect();
+            startBoost(e.clientX < r.left + r.width / 2 ? 1.5 : 2);
+        }, LONG_PRESS_MS);
+    });
+
+    tapLayer?.addEventListener('pointermove', (e) => {
+        if (!press || boosting) return;
+        if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > 12) {
+            clearTimeout(pressTimer);
+            press = null;
         }
     });
+
+    tapLayer?.addEventListener('pointerup', (e) => {
+        clearTimeout(pressTimer);
+        if (boosting) {
+            stopBoost();
+            press = null;
+            return;
+        }
+        if (!press) return;
+        press = null;
+        handleTap(e.clientX);
+    });
+
+    ['pointercancel', 'pointerleave'].forEach((evt) => tapLayer?.addEventListener(evt, () => {
+        clearTimeout(pressTimer);
+        press = null;
+        stopBoost();
+    }));
+
+    stage?.addEventListener('contextmenu', (e) => e.preventDefault());
 
     showControls();
 
@@ -536,101 +655,34 @@
     });
 
     // ═══════════════════════════════════════════
-    // SUBTITLE & AUDIO TRACK DISCOVERY
-    // ═══════════════════════════════════════════
-    let discoveredTracks = [];
-
-    const renderTrackSheets = () => {
-        const subtitleTracks = discoveredTracks.filter((t) => t.type === 'subtitle');
-        const audioTracks = discoveredTracks.filter((t) => t.type === 'audio');
-
-        if (subtitleOptions) {
-            subtitleOptions.innerHTML = '';
-            if (!subtitleTracks.length) {
-                subtitleOptions.innerHTML = '<div class="sheet-empty">No embedded subtitles found.</div>';
-            } else {
-                // Reflect whatever is actually showing right now, not just "Off" -
-                // this sheet gets rebuilt every time it's opened, so it must not
-                // forget a selection that's already active on the video.
-                const activeLabel = activeSubTrack()?.label || null;
-
-                const offBtn = document.createElement('button');
-                offBtn.className = 'sheet-option' + (activeLabel ? '' : ' selected');
-                offBtn.textContent = 'Off';
-                offBtn.addEventListener('click', () => {
-                    Array.from(video.textTracks || []).forEach((t) => { t.mode = 'disabled'; });
-                    renderCues();
-                    syncSelectedOption(subtitleOptions, offBtn);
-                    closeSheets();
-                });
-                subtitleOptions.appendChild(offBtn);
-
-                subtitleTracks.forEach((track, index) => {
-                    const hasLanguage = track.language && track.language !== 'und';
-                    const label = track.name || (hasLanguage ? track.language.toUpperCase() : `Track ${index + 1}`);
-                    const btn = document.createElement('button');
-                    btn.className = 'sheet-option' + (label === activeLabel ? ' selected' : '');
-                    btn.textContent = label;
-                    btn.addEventListener('click', () => {
-                        const trackEl = ensureSubtitleAdded(track, index);
-                        Array.from(video.textTracks || []).forEach((t) => {
-                            // 'hidden' = cues load and fire cuechange, but the
-                            // browser doesn't draw them; our overlay does.
-                            t.mode = (trackEl && t.label === trackEl.label) ? 'hidden' : 'disabled';
-                            watchCues(t);
-                        });
-                        renderCues();
-                        syncSelectedOption(subtitleOptions, btn);
-                        closeSheets();
-                    });
-                    subtitleOptions.appendChild(btn);
-                });
-            }
-        }
-
-        if (audioOptions) {
-            audioOptions.innerHTML = '';
-            if (audioTracks.length <= 1) {
-                audioOptions.innerHTML = '<div class="sheet-empty">Only one audio track.</div>';
-            } else {
-                audioTracks.forEach((track, index) => {
-                    const hasLanguage = track.language && track.language !== 'und';
-                    const label = track.name || (hasLanguage ? track.language.toUpperCase() : `Track ${index + 1}`);
-                    const row = document.createElement('div');
-                    row.className = 'sheet-option';
-                    row.style.cursor = 'default';
-                    row.textContent = label;
-                    row.title = "In-browser audio switching isn't supported — download the file to pick a track in an external player.";
-                    audioOptions.appendChild(row);
-                });
-            }
-        }
-
-        if (tracksLabel) {
-            tracksLabel.textContent = audioTracks.length > 1 ? `${audioTracks.length} Audio` : 'Captions';
-        }
-    };
-
-    const syncSelectedOption = (container, selectedBtn) => {
-        container.querySelectorAll('.sheet-option').forEach((el) => el.classList.remove('selected'));
-        selectedBtn.classList.add('selected');
-    };
-
-    const addedSubtitleTrackEls = new Map();
-
-    // ═══════════════════════════════════════════
-    // SUBTITLE RENDERING — our own overlay instead of the browser's, so
-    // the text sits on the actual picture (not the bottom of a letterboxed
-    // fullscreen screen), lifts above the control bar while it's showing,
-    // and lays out each line by its own direction (Hebrew/Arabic RTL with
-    // punctuation on the correct side).
+    // SUBTITLES
+    // The server extracts embedded subtitles one minute at a time
+    // (GET /subtitle/<file>?track=N&t=<seconds>) using the MKV index, so
+    // the first line shows within seconds instead of after the whole movie
+    // has been read. We keep the windows around the playhead loaded and draw
+    // the lines ourselves: on the actual picture, lifted above the control
+    // bar while it's visible, each line laid out in its own direction so
+    // Hebrew/Arabic punctuation lands on the correct side.
     // ═══════════════════════════════════════════
     const subOverlay = document.getElementById('subOverlay');
     const ovBottom = document.getElementById('ovBottom');
-    const watchedTracks = new WeakSet();
+    const SUB_WINDOW_S = 60;
 
-    const activeSubTrack = () => Array.from(video.textTracks || [])
-        .find((t) => t.mode === 'hidden' || t.mode === 'showing') || null;
+    let discoveredTracks = [];
+    let subTrack = null;          // selected track number, or null = off
+    let subCues = [];             // [{s, e, t}] ms, sorted by start
+    let subWindows = new Map();   // window index -> 'loading' | 'done' | 'error'
+    let subGeneration = 0;        // bumps on every selection, drops stale responses
+    let subLoadingToastShown = false;
+
+    const languageName = (code) => {
+        if (!code || code === 'und') return null;
+        try {
+            const name = new Intl.DisplayNames([navigator.language || 'en', 'en'], { type: 'language' }).of(code);
+            if (name && name.toLowerCase() !== code.toLowerCase()) return name;
+        } catch { /* fall through */ }
+        return code.toUpperCase();
+    };
 
     const positionSubs = () => {
         if (!subOverlay || !stage) return;
@@ -646,27 +698,91 @@
         subOverlay.style.fontSize = `${Math.round(Math.max(13, Math.min(34, picH * 0.055)))}px`;
     };
 
+    let shownCueKey = '';
     const renderCues = () => {
         if (!subOverlay) return;
-        const track = activeSubTrack();
-        const cues = track?.activeCues ? Array.from(track.activeCues) : [];
-        subOverlay.replaceChildren(...cues.map((cue) => {
+        const now = video.currentTime * 1000;
+        const active = subTrack == null ? [] : subCues.filter((c) => c.s <= now && now < c.e);
+        const key = active.map((c) => `${c.s}:${c.t}`).join('|');
+        if (key === shownCueKey) return;
+        shownCueKey = key;
+        subOverlay.replaceChildren(...active.map((c) => {
             const line = document.createElement('div');
             line.className = 'sub-line';
             line.dir = 'auto';
-            if (typeof cue.getCueAsHTML === 'function') line.appendChild(cue.getCueAsHTML());
-            else line.textContent = cue.text || '';
+            line.textContent = c.t.replace(/<[^>]*>/g, '');
             return line;
         }));
         positionSubs();
     };
 
-    const watchCues = (t) => {
-        if (watchedTracks.has(t)) return;
-        watchedTracks.add(t);
-        t.addEventListener('cuechange', renderCues);
+    const mergeCues = (incoming) => {
+        const seen = new Set(subCues.map((c) => `${c.s}:${c.t}`));
+        incoming.forEach((c) => {
+            if (typeof c?.s !== 'number' || typeof c?.e !== 'number' || typeof c?.t !== 'string') return;
+            const k = `${c.s}:${c.t}`;
+            if (!seen.has(k)) { seen.add(k); subCues.push({ s: c.s, e: c.e, t: c.t }); }
+        });
+        subCues.sort((a, b) => a.s - b.s);
     };
 
+    const loadSubWindow = async (idx) => {
+        if (subTrack == null || idx < 0 || subWindows.has(idx)) return;
+        if (duration > 0 && idx * SUB_WINDOW_S > duration) return;
+        const url = deriveAuxUrl('subtitle');
+        if (!url) return;
+        url.searchParams.set('track', subTrack);
+        url.searchParams.set('t', String(idx * SUB_WINDOW_S));
+        const gen = subGeneration;
+        subWindows.set(idx, 'loading');
+        try {
+            const res = await fetch(url.toString());
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            if (gen !== subGeneration) return;
+            mergeCues(Array.isArray(data?.cues) ? data.cues : []);
+            subWindows.set(idx, 'done');
+            shownCueKey = '';
+            renderCues();
+        } catch {
+            if (gen !== subGeneration) return;
+            subWindows.set(idx, 'error');
+            // Let a later timeupdate retry this window.
+            setTimeout(() => { if (gen === subGeneration && subWindows.get(idx) === 'error') subWindows.delete(idx); }, 8000);
+            if (idx === Math.floor(video.currentTime / SUB_WINDOW_S)) toast("Couldn't load subtitles, retrying…");
+        }
+    };
+
+    const ensureSubWindows = () => {
+        if (subTrack == null) return;
+        const idx = Math.floor(video.currentTime / SUB_WINDOW_S);
+        loadSubWindow(idx);
+        // Prefetch the next minute well before it's needed.
+        if (video.currentTime % SUB_WINDOW_S > SUB_WINDOW_S / 3) loadSubWindow(idx + 1);
+        if (!subLoadingToastShown && subWindows.get(idx) === 'loading') {
+            subLoadingToastShown = true;
+            toast('Loading subtitles…');
+        }
+    };
+
+    const updateSubIndicator = () => {
+        [tracksBtn, topTracksBtn].forEach((b) => b?.classList.toggle('is-on', subTrack != null));
+    };
+
+    const selectSubtitle = (trackNumber) => {
+        subGeneration += 1;
+        subTrack = trackNumber;
+        subCues = [];
+        subWindows = new Map();
+        subLoadingToastShown = false;
+        shownCueKey = '';
+        renderCues();
+        updateSubIndicator();
+        ensureSubWindows();
+    };
+
+    video.addEventListener('timeupdate', () => { renderCues(); ensureSubWindows(); });
+    video.addEventListener('seeked', () => { renderCues(); ensureSubWindows(); });
     video.addEventListener('loadedmetadata', positionSubs);
     if (stage) {
         new MutationObserver(positionSubs).observe(stage, {
@@ -676,23 +792,82 @@
         if (window.ResizeObserver) new ResizeObserver(positionSubs).observe(stage);
     }
 
-    const ensureSubtitleAdded = (track, index) => {
-        const key = `${track.number}`;
-        if (addedSubtitleTrackEls.has(key)) return addedSubtitleTrackEls.get(key);
-        if (!video || track.number == null) return null;
-        const subUrl = deriveAuxUrl('subtitle');
-        if (!subUrl) return null;
-        subUrl.searchParams.set('track', track.number);
-        const hasLanguage = track.language && track.language !== 'und';
-        const label = track.name || (hasLanguage ? track.language.toUpperCase() : `Track ${index + 1}`);
-        const trackEl = document.createElement('track');
-        trackEl.kind = 'subtitles';
-        trackEl.label = label;
-        if (hasLanguage) trackEl.srclang = track.language;
-        trackEl.src = subUrl.toString();
-        video.appendChild(trackEl);
-        addedSubtitleTrackEls.set(key, trackEl);
-        return trackEl;
+    const syncSelectedOption = (container, selectedBtn) => {
+        container.querySelectorAll('.sheet-option').forEach((el) => el.classList.remove('selected'));
+        selectedBtn.classList.add('selected');
+    };
+
+    const optionWithLabels = (main, sub) => {
+        const btn = document.createElement('button');
+        btn.className = 'sheet-option';
+        const text = document.createElement('span');
+        text.className = 'opt-text';
+        const mainEl = document.createElement('span');
+        mainEl.className = 'opt-main';
+        mainEl.textContent = main;
+        text.appendChild(mainEl);
+        if (sub && sub !== main) {
+            const subEl = document.createElement('span');
+            subEl.className = 'opt-sub';
+            subEl.dir = 'auto';
+            subEl.textContent = sub;
+            text.appendChild(subEl);
+        }
+        btn.appendChild(text);
+        return btn;
+    };
+
+    const renderTrackSheets = () => {
+        const subtitleTracks = discoveredTracks.filter((t) => t.type === 'subtitle');
+        const audioTracks = discoveredTracks.filter((t) => t.type === 'audio');
+
+        if (subtitleOptions) {
+            subtitleOptions.innerHTML = '';
+            if (!subtitleTracks.length) {
+                subtitleOptions.innerHTML = '<div class="sheet-empty">No embedded subtitles found.</div>';
+            } else {
+                const offBtn = optionWithLabels('Off');
+                if (subTrack == null) offBtn.classList.add('selected');
+                offBtn.addEventListener('click', () => {
+                    selectSubtitle(null);
+                    syncSelectedOption(subtitleOptions, offBtn);
+                    closeSheets();
+                });
+                subtitleOptions.appendChild(offBtn);
+
+                subtitleTracks.forEach((track, index) => {
+                    const lang = languageName(track.language);
+                    const main = lang || track.name || `Track ${index + 1}`;
+                    const btn = optionWithLabels(main, track.name);
+                    const usable = !track.codec || track.codec.startsWith('S_TEXT/');
+                    if (!usable) {
+                        btn.disabled = true;
+                        btn.title = 'Image-based subtitles (PGS/VobSub) can only be shown by an external player.';
+                    }
+                    if (track.number === subTrack) btn.classList.add('selected');
+                    btn.addEventListener('click', () => {
+                        selectSubtitle(track.number);
+                        syncSelectedOption(subtitleOptions, btn);
+                        closeSheets();
+                    });
+                    subtitleOptions.appendChild(btn);
+                });
+            }
+        }
+
+        if (audioOptions) {
+            audioOptions.innerHTML = '';
+            if (audioTracks.length <= 1) {
+                audioOptions.innerHTML = '<div class="sheet-empty">Only one audio track.</div>';
+            } else {
+                audioTracks.forEach((track, index) => {
+                    const row = optionWithLabels(languageName(track.language) || track.name || `Track ${index + 1}`, track.name);
+                    row.disabled = true;
+                    row.title = "In-browser audio switching isn't supported — download the file to pick a track in an external player.";
+                    audioOptions.appendChild(row);
+                });
+            }
+        }
     };
 
     const initTracks = async () => {

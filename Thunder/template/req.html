@@ -78,6 +78,12 @@
         <video id="player" playsinline webkit-playsinline preload="metadata" tabindex="-1"></video>
         <div class="sub-overlay" id="subOverlay" aria-live="off"></div>
 
+        <!-- Shown while a long-press is speeding playback up -->
+        <div class="boost-badge" id="boostBadge" hidden>
+            <svg viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+            <span id="boostLabel">2x</span>
+        </div>
+
         <!-- Tap anywhere to toggle the overlay -->
         <div class="tap-layer" id="tapLayer"></div>
 
@@ -162,7 +168,7 @@
                 </button>
                 <button class="action-btn" id="tracksBtn">
                     <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6v-2zm0 4h8v2H6v-2zm10 0h2v2h-2v-2zm-6-4h8v2h-8v-2z"/></svg>
-                    <span id="tracksLabel">Captions</span>
+                    <span>Subtitles</span>
                 </button>
                 <button class="action-btn" id="openInBtn">
                     <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9.5 7.5v9l7-4.5-7-4.5z"/></svg>

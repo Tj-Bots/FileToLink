@@ -2008,3 +2008,136 @@ svg[hidden] {
 .cmd-btn span {
     display: inline;
 }
+
+/* The cinema block holds the player, whose sheets are position:fixed.
+   Keep the whole block above the page's command bar (z-index 10) so a
+   sheet opened from the page isn't drawn underneath those buttons. */
+.cinema {
+    z-index: 20;
+}
+
+.player-stage {
+    -webkit-touch-callout: none;
+}
+
+/* Long-press speed badge */
+.boost-badge {
+    position: absolute;
+    top: max(12px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, .6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: .875rem;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+.boost-badge[hidden] {
+    display: none;
+}
+
+.boost-badge svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    animation: boostNudge 1s ease-in-out infinite;
+}
+
+@keyframes boostNudge {
+    0%, 100% { transform: translateX(0); opacity: .8; }
+    50% { transform: translateX(3px); opacity: 1; }
+}
+
+/* Double-tap seek ripple on the left/right third */
+.side-seek {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 36%;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, .12);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: .875rem;
+    font-weight: 700;
+    pointer-events: none;
+    animation: sideSeekFade .65s ease forwards;
+}
+
+.side-seek.left {
+    left: 0;
+    border-radius: 0 50% 50% 0 / 0 50% 50% 0;
+}
+
+.side-seek.right {
+    right: 0;
+    border-radius: 50% 0 0 50% / 50% 0 0 50%;
+}
+
+@keyframes sideSeekFade {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* "Subtitles on" marker under the subtitles buttons */
+#topTracksBtn,
+#tracksBtn {
+    position: relative;
+}
+
+#topTracksBtn.is-on::after,
+#tracksBtn.is-on::after {
+    content: '';
+    position: absolute;
+    left: 28%;
+    right: 28%;
+    bottom: 3px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--ember);
+}
+
+#tracksBtn.is-on {
+    color: var(--ember);
+}
+
+/* Track options: language on top, the track's own name below */
+.opt-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.opt-main {
+    font-weight: 600;
+}
+
+.opt-sub {
+    font-size: .75rem;
+    color: var(--ghost);
+    unicode-bidi: plaintext;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.sheet-option:disabled {
+    opacity: .55;
+    cursor: default;
+}
