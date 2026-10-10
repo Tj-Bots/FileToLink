@@ -62,6 +62,7 @@
     const subtitleOptions = document.getElementById('subtitleOptions');
     const audioOptions = document.getElementById('audioOptions');
     const openInSheet = document.getElementById('openInSheet');
+    const subStyleSheet = document.getElementById('subStyleSheet');
 
     const toastStack = document.getElementById('toastStack');
     const copyrightYear = document.getElementById('copyrightYear');
@@ -117,7 +118,7 @@
     // ═══════════════════════════════════════════
     // SHEETS (speed / sleep / tracks / open-in)
     // ═══════════════════════════════════════════
-    const allSheets = [speedSheet, sleepSheet, tracksSheet, openInSheet].filter(Boolean);
+    const allSheets = [speedSheet, sleepSheet, tracksSheet, openInSheet, subStyleSheet].filter(Boolean);
 
     const closeSheets = () => {
         allSheets.forEach((s) => setHidden(s, true));
@@ -684,6 +685,14 @@
         return code.toUpperCase();
     };
 
+    // Appearance, as in TjGramApp's subtitle settings. Kept per viewer.
+    const SUB_PREFS_KEY = 'tj_sub_prefs';
+    const SUB_DEFAULTS = { size: 18, pos: 0, sync: 0, style: 'outline' };
+    let subPrefs = { ...SUB_DEFAULTS };
+    try { subPrefs = { ...SUB_DEFAULTS, ...JSON.parse(localStorage.getItem(SUB_PREFS_KEY) || '{}') }; } catch { /* ignore */ }
+    const saveSubPrefs = () => { try { localStorage.setItem(SUB_PREFS_KEY, JSON.stringify(subPrefs)); } catch { /* ignore */ } };
+    let subPreview = false; // sample line while the settings sheet is open
+
     const positionSubs = () => {
         if (!subOverlay || !stage) return;
         const w = stage.clientWidth;
@@ -694,27 +703,94 @@
         const picGap = (h - picH) / 2;
         const controlsUp = !stage.hasAttribute('data-hidden') && !stage.hasAttribute('data-locked');
         const barH = controlsUp && ovBottom ? ovBottom.offsetHeight : 0;
-        subOverlay.style.bottom = `${Math.round(Math.max(picGap, barH) + picH * 0.04)}px`;
-        subOverlay.style.fontSize = `${Math.round(Math.max(13, Math.min(34, picH * 0.055)))}px`;
+        // Bottom of the picture, raised by the chosen position - but never under the control bar.
+        const bottom = Math.max(picGap + picH * (subPrefs.pos / 100), barH) + 8;
+        subOverlay.style.bottom = `${Math.round(bottom)}px`;
+        subOverlay.style.fontSize = `${Math.max(11, Math.round(subPrefs.size * Math.max(0.55, picH / 400)))}px`;
+        subOverlay.dataset.style = subPrefs.style;
+    };
+
+    // ---- Right-to-left, exactly as TjGramApp's TjSubtitleView does it ----
+    // Strip the bidi control characters the file already carries (a second
+    // layer of them is what reverses a line instead of fixing it) and any
+    // markup; then, if the cue has Hebrew/Arabic, move each line's trailing
+    // punctuation run to its front and lay the line out left-to-right.
+    const SUB_MARKUP = /\{[^}]*\}|<\/?[a-zA-Z][^>]*>/g;
+    const BIDI_CONTROLS = /[‎‏‪-‮⁦-⁩]/g;
+    const RTL_CHAR = /[֐-׿؀-ۿݐ-ݿࢠ-ࣿיִ-﷿ﹰ-﻿]/;
+    const TRAILING_PUNCT = new Set([',', '.', '!', '?', ':', ';', '…', '،', '؛', '؟']);
+
+    const cueLines = (text) => text.replace(SUB_MARKUP, '').replace(BIDI_CONTROLS, '')
+        .split(/\r?\n|\\[Nn]/).map((l) => l.trim()).filter(Boolean);
+
+    const movePunctuationToFront = (line) => {
+        if (line.length < 2 || TRAILING_PUNCT.has(line[0])) return line;
+        let cut = line.length;
+        while (cut > 0 && TRAILING_PUNCT.has(line[cut - 1])) cut -= 1;
+        if (cut === line.length || cut === 0) return line;
+        return line.slice(cut) + line.slice(0, cut);
+    };
+
+    const displayLines = (texts) => {
+        const raw = texts.flatMap(cueLines);
+        const rtl = RTL_CHAR.test(raw.join('\n'));
+        return rtl ? raw.map(movePunctuationToFront) : raw;
+    };
+
+    const activeCues = () => {
+        if (subTrack == null) return [];
+        const now = video.currentTime * 1000 - subPrefs.sync * 1000;
+        return subCues.filter((c) => c.s <= now && now < c.e);
     };
 
     let shownCueKey = '';
     const renderCues = () => {
         if (!subOverlay) return;
-        const now = video.currentTime * 1000;
-        const active = subTrack == null ? [] : subCues.filter((c) => c.s <= now && now < c.e);
-        const key = active.map((c) => `${c.s}:${c.t}`).join('|');
+        let texts = activeCues().map((c) => c.t);
+        if (!texts.length && subPreview) texts = ['כך ייראו הכתוביות.'];
+        const key = texts.join('|') + `|${subPreview}`;
         if (key === shownCueKey) return;
         shownCueKey = key;
-        subOverlay.replaceChildren(...active.map((c) => {
+        subOverlay.replaceChildren(...displayLines(texts).map((l) => {
             const line = document.createElement('div');
             line.className = 'sub-line';
-            line.dir = 'auto';
-            line.textContent = c.t.replace(/<[^>]*>/g, '');
+            line.dir = 'ltr';
+            line.textContent = l;
             return line;
         }));
         positionSubs();
     };
+
+    // Picture-in-picture only draws the browser's own text tracks, so the
+    // same cues are mirrored into one and shown only while in PiP. An LRM
+    // in front of each line keeps the browser's layout left-to-right, which
+    // is what the moved punctuation expects.
+    let pipTrack = null;
+    const pipCueKeys = new Set();
+    const ensurePipTrack = () => {
+        if (pipTrack || typeof video.addTextTrack !== 'function' || typeof VTTCue === 'undefined') return pipTrack;
+        pipTrack = video.addTextTrack('subtitles', 'Subtitles');
+        pipTrack.mode = document.pictureInPictureElement === video ? 'showing' : 'hidden';
+        return pipTrack;
+    };
+    const clearPipCues = () => {
+        if (!pipTrack) return;
+        Array.from(pipTrack.cues || []).forEach((c) => pipTrack.removeCue(c));
+        pipCueKeys.clear();
+    };
+    const syncPipCues = () => {
+        if (!ensurePipTrack()) return;
+        const offset = subPrefs.sync;
+        subCues.forEach((c) => {
+            const k = `${c.s}:${c.t}`;
+            if (pipCueKeys.has(k)) return;
+            pipCueKeys.add(k);
+            const text = displayLines([c.t]).map((l) => `‎${l}`).join('\n');
+            try { pipTrack.addCue(new VTTCue(c.s / 1000 + offset, c.e / 1000 + offset, text)); } catch { /* ignore */ }
+        });
+    };
+    video.addEventListener('enterpictureinpicture', () => { if (ensurePipTrack()) pipTrack.mode = 'showing'; });
+    video.addEventListener('leavepictureinpicture', () => { if (pipTrack) pipTrack.mode = 'hidden'; });
 
     const mergeCues = (incoming) => {
         const seen = new Set(subCues.map((c) => `${c.s}:${c.t}`));
@@ -724,6 +800,7 @@
             if (!seen.has(k)) { seen.add(k); subCues.push({ s: c.s, e: c.e, t: c.t }); }
         });
         subCues.sort((a, b) => a.s - b.s);
+        syncPipCues();
     };
 
     const loadSubWindow = async (idx) => {
@@ -744,6 +821,7 @@
             subWindows.set(idx, 'done');
             shownCueKey = '';
             renderCues();
+            scheduleSubFill();
         } catch {
             if (gen !== subGeneration) return;
             subWindows.set(idx, 'error');
@@ -753,12 +831,36 @@
         }
     };
 
+    // After the minute under the playhead is in, keep pulling the rest of the
+    // track one minute at a time (ahead of the playhead first, then from the
+    // start), so seeking anywhere later already has its subtitles. The server
+    // caches every minute, so the next viewer of the file gets them at once.
+    let subFillBusy = false;
+    const scheduleSubFill = () => {
+        if (subFillBusy || subTrack == null || !(duration > 0)) return;
+        const total = Math.ceil(duration / SUB_WINDOW_S);
+        const here = Math.max(0, Math.floor(video.currentTime / SUB_WINDOW_S));
+        let next = -1;
+        for (let i = 0; i < total && next < 0; i++) {
+            const idx = (here + i) % total;
+            if (!subWindows.has(idx)) next = idx;
+        }
+        if (next < 0) return;
+        subFillBusy = true;
+        const gen = subGeneration;
+        setTimeout(async () => {
+            if (gen === subGeneration) await loadSubWindow(next);
+            subFillBusy = false;
+            if (gen === subGeneration) scheduleSubFill();
+        }, 250);
+    };
+
     const ensureSubWindows = () => {
         if (subTrack == null) return;
-        const idx = Math.floor(video.currentTime / SUB_WINDOW_S);
+        const idx = Math.floor(Math.max(0, video.currentTime - subPrefs.sync) / SUB_WINDOW_S);
         loadSubWindow(idx);
         // Prefetch the next minute well before it's needed.
-        if (video.currentTime % SUB_WINDOW_S > SUB_WINDOW_S / 3) loadSubWindow(idx + 1);
+        loadSubWindow(idx + 1);
         if (!subLoadingToastShown && subWindows.get(idx) === 'loading') {
             subLoadingToastShown = true;
             toast('Loading subtitles…');
@@ -773,6 +875,7 @@
         subGeneration += 1;
         subTrack = trackNumber;
         subCues = [];
+        clearPipCues();
         subWindows = new Map();
         subLoadingToastShown = false;
         shownCueKey = '';
@@ -837,8 +940,7 @@
 
                 subtitleTracks.forEach((track, index) => {
                     const lang = languageName(track.language);
-                    const main = lang || track.name || `Track ${index + 1}`;
-                    const btn = optionWithLabels(main, track.name);
+                    const btn = optionWithLabels(lang || track.name || `Track ${index + 1}`, lang ? track.name : null);
                     const usable = !track.codec || track.codec.startsWith('S_TEXT/');
                     if (!usable) {
                         btn.disabled = true;
@@ -891,6 +993,112 @@
         renderTrackSheets();
         openSheet(tracksSheet);
     }));
+
+    // ═══════════════════════════════════════════
+    // SUBTITLE SETTINGS SHEET
+    // ═══════════════════════════════════════════
+    const subSize = document.getElementById('subSize');
+    const subPos = document.getElementById('subPos');
+    const subSync = document.getElementById('subSync');
+    const subStyleSeg = document.getElementById('subStyleSeg');
+
+    const reflectSubPrefs = () => {
+        if (subSize) subSize.value = subPrefs.size;
+        if (subPos) subPos.value = subPrefs.pos;
+        if (subSync) subSync.value = subPrefs.sync;
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        set('subSizeVal', subPrefs.size);
+        set('subPosVal', subPrefs.pos);
+        set('subSyncVal', `${subPrefs.sync > 0 ? '+' : ''}${(+subPrefs.sync).toFixed(1).replace(/\.0$/, '')}s`);
+        [subSize, subPos, subSync].forEach((r) => {
+            if (!r) return;
+            const pct = ((r.value - r.min) / (r.max - r.min)) * 100;
+            r.style.setProperty('--fill', `${pct}%`);
+        });
+        subStyleSeg?.querySelectorAll('button').forEach((b) => b.classList.toggle('selected', b.dataset.style === subPrefs.style));
+    };
+
+    const applySubPrefs = (changes) => {
+        const syncChanged = 'sync' in changes && changes.sync !== subPrefs.sync;
+        subPrefs = { ...subPrefs, ...changes };
+        saveSubPrefs();
+        reflectSubPrefs();
+        if (syncChanged) { clearPipCues(); syncPipCues(); ensureSubWindows(); }
+        shownCueKey = '';
+        renderCues();
+        positionSubs();
+    };
+
+    subSize?.addEventListener('input', () => applySubPrefs({ size: Number(subSize.value) }));
+    subPos?.addEventListener('input', () => applySubPrefs({ pos: Number(subPos.value) }));
+    subSync?.addEventListener('input', () => applySubPrefs({ sync: Math.round(Number(subSync.value) * 10) / 10 }));
+    document.getElementById('subSyncMinus')?.addEventListener('click', () =>
+        applySubPrefs({ sync: Math.max(-10, Math.round((subPrefs.sync - 0.1) * 10) / 10) }));
+    document.getElementById('subSyncPlus')?.addEventListener('click', () =>
+        applySubPrefs({ sync: Math.min(10, Math.round((subPrefs.sync + 0.1) * 10) / 10) }));
+    subStyleSeg?.querySelectorAll('button').forEach((b) =>
+        b.addEventListener('click', () => applySubPrefs({ style: b.dataset.style })));
+    document.getElementById('subStyleReset')?.addEventListener('click', () => applySubPrefs({ ...SUB_DEFAULTS }));
+
+    const setSubPreview = (on) => {
+        subPreview = on;
+        shownCueKey = '';
+        renderCues();
+    };
+    document.getElementById('subStyleBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        reflectSubPrefs();
+        openSheet(subStyleSheet);
+        setSubPreview(true);
+    });
+    document.getElementById('subStyleBack')?.addEventListener('click', () => {
+        setSubPreview(false);
+        renderTrackSheets();
+        openSheet(tracksSheet);
+    });
+    // Any way the settings sheet closes ends the sample line.
+    new MutationObserver(() => {
+        if (subPreview && subStyleSheet?.hasAttribute('hidden')) setSubPreview(false);
+    }).observe(subStyleSheet || document.createElement('div'), { attributes: true, attributeFilter: ['hidden'] });
+    reflectSubPrefs();
+
+    // ═══════════════════════════════════════════
+    // SHEETS: drag the top (handle / title) down to close
+    // ═══════════════════════════════════════════
+    allSheets.forEach((sheet) => {
+        let drag = null;
+        sheet.addEventListener('pointerdown', (e) => {
+            if (!e.target.closest('.sheet-handle, .sheet-head, .sheet-title')) return;
+            if (e.target.closest('button')) return;
+            drag = { y: e.clientY, t: performance.now(), dy: 0, id: e.pointerId };
+            sheet.setPointerCapture?.(e.pointerId);
+            sheet.style.transition = 'none';
+        });
+        sheet.addEventListener('pointermove', (e) => {
+            if (!drag || e.pointerId !== drag.id) return;
+            drag.dy = Math.max(0, e.clientY - drag.y);
+            sheet.style.transform = `translateY(${drag.dy}px)`;
+        });
+        const end = () => {
+            if (!drag) return;
+            const { dy, t } = drag;
+            drag = null;
+            const fast = dy / Math.max(1, performance.now() - t) > 0.5;
+            sheet.style.transition = 'transform .2s ease';
+            if (dy > 80 || (fast && dy > 20)) {
+                sheet.style.transform = 'translateY(110%)';
+                setTimeout(() => {
+                    closeSheets();
+                    sheet.style.transform = '';
+                    sheet.style.transition = '';
+                }, 200);
+            } else {
+                sheet.style.transform = '';
+            }
+        };
+        sheet.addEventListener('pointerup', end);
+        sheet.addEventListener('pointercancel', end);
+    });
 
     // ═══════════════════════════════════════════
     // KEYBOARD SHORTCUTS

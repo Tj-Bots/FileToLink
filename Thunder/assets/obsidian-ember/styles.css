@@ -1409,13 +1409,25 @@ body.player-pseudo-fs {
 
 .sub-line {
     max-width: 100%;
-    unicode-bidi: plaintext;
-    white-space: pre-line;
     color: #fff;
-    background: rgba(0, 0, 0, .55);
-    padding: .08em .45em;
+    font-weight: 700;
+    padding: .04em .4em;
     border-radius: 4px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, .9);
+}
+
+/* Styles as in TjGramApp: outline (default), shadow, full background */
+.sub-overlay[data-style="outline"] .sub-line {
+    text-shadow:
+        -.06em -.06em 0 #000, .06em -.06em 0 #000, -.06em .06em 0 #000, .06em .06em 0 #000,
+        0 -.07em 0 #000, 0 .07em 0 #000, -.07em 0 0 #000, .07em 0 0 #000;
+}
+
+.sub-overlay[data-style="shadow"] .sub-line {
+    text-shadow: 0 1px 3px #000, 0 0 2px #000;
+}
+
+.sub-overlay[data-style="box"] .sub-line {
+    background: rgba(0, 0, 0, .75);
 }
 
 .sub-line:empty {
@@ -1795,8 +1807,11 @@ svg[hidden] {
 .seek-range {
     flex: 1;
     appearance: none;
+    -webkit-appearance: none;
     height: 4px;
-    background: rgba(255,255,255,.3);
+    /* The played part is painted on the input itself, so the blue always
+       reaches exactly the thumb (JS keeps --fill in sync). */
+    background: linear-gradient(to right, var(--ember) 0%, var(--ember) var(--fill, 0%), rgba(255,255,255,.3) var(--fill, 0%));
     border-radius: 2px;
     cursor: pointer;
 }
@@ -1818,11 +1833,12 @@ svg[hidden] {
     background: var(--ember);
 }
 
-.seek-range::-webkit-slider-runnable-track,
+.seek-range::-webkit-slider-runnable-track {
+    background: transparent;
+}
+
 .seek-range::-moz-range-track {
-    height: 4px;
-    border-radius: 2px;
-    background: linear-gradient(to right, var(--ember) 0%, var(--ember) var(--fill, 0%), rgba(255,255,255,.3) var(--fill, 0%));
+    background: transparent;
 }
 
 .action-row {
@@ -2128,16 +2144,127 @@ svg[hidden] {
 }
 
 .opt-sub {
-    font-size: .75rem;
-    color: var(--ghost);
+    font-size: .8125rem;
+    color: var(--mist);
     unicode-bidi: plaintext;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
 }
 
 .sheet-option:disabled {
     opacity: .55;
     cursor: default;
+}
+
+/* Sheet header row (title + gear / back / reset) and a bigger grab area
+   on top for drag-to-close */
+.sheet-handle {
+    box-sizing: content-box;
+    padding: 8px 40%;
+    margin: -8px auto calc(var(--space-md) - 8px);
+    background-clip: content-box;
+    cursor: grab;
+    touch-action: none;
+}
+
+.sheet-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+    touch-action: none;
+}
+
+.sheet-head .sheet-title {
+    flex: 1;
+    margin: 0;
+}
+
+.sheet-title {
+    touch-action: none;
+}
+
+.sheet-head-btn {
+    flex: none;
+    color: var(--pearl);
+}
+
+/* Subtitle settings */
+.setting-row + .setting-row {
+    margin-top: var(--space-lg);
+}
+
+.setting-label {
+    color: var(--pearl);
+    font-size: .875rem;
+    margin-bottom: var(--space-sm);
+}
+
+.setting-range {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, var(--ember) 0%, var(--ember) var(--fill, 0%), rgba(255,255,255,.2) var(--fill, 0%));
+    cursor: pointer;
+}
+
+.setting-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--ember);
+}
+
+.setting-range::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: var(--ember);
+}
+
+.setting-stepper {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.step-btn {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,.05);
+    color: var(--pearl);
+    font-size: 1.125rem;
+    cursor: pointer;
+}
+
+.segmented {
+    display: flex;
+    padding: 4px;
+    gap: 4px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.06);
+}
+
+.segmented button {
+    flex: 1;
+    padding: 8px 6px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--mist);
+    font-family: var(--font-body);
+    font-size: .875rem;
+    cursor: pointer;
+}
+
+.segmented button.selected {
+    background: var(--ember);
+    color: #fff;
 }
