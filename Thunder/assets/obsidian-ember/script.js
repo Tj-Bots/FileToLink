@@ -32,7 +32,9 @@
     const iconPause = playBtn?.querySelector('.icon-pause');
     const iconSpinner = playBtn?.querySelector('.icon-spinner');
 
+    const brightnessWrap = document.getElementById('brightnessWrap');
     const brightnessSlider = document.getElementById('brightnessSlider');
+    const volumeWrap = document.getElementById('volumeWrap');
     const volumeSlider = document.getElementById('volumeSlider');
     const volumeIcon = document.getElementById('volumeIcon');
 
@@ -352,7 +354,29 @@
 
     // ═══════════════════════════════════════════
     // SIDE SLIDERS: brightness / volume
+    // Hidden at rest (only the icon shows); the track + thumb reveal
+    // while the slider is actually being dragged, then fade back out
+    // shortly after release.
     // ═══════════════════════════════════════════
+    const wireSliderReveal = (wrap, range) => {
+        if (!wrap || !range) return;
+        let hideTimer = null;
+        const reveal = () => {
+            wrap.classList.add('active');
+            clearTimeout(hideTimer);
+        };
+        const scheduleHide = () => {
+            clearTimeout(hideTimer);
+            hideTimer = setTimeout(() => wrap.classList.remove('active'), 700);
+        };
+        range.addEventListener('pointerdown', reveal);
+        range.addEventListener('input', reveal);
+        range.addEventListener('pointerup', scheduleHide);
+        range.addEventListener('change', scheduleHide);
+    };
+    wireSliderReveal(brightnessWrap, brightnessSlider);
+    wireSliderReveal(volumeWrap, volumeSlider);
+
     brightnessSlider?.addEventListener('input', () => {
         if (video) video.style.filter = `brightness(${brightnessSlider.value}%)`;
         showControls();

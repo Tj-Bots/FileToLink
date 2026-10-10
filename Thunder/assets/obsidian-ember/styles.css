@@ -1397,10 +1397,13 @@ svg[hidden] {
        page-embedded player those overlays can overlap the center seek/play
        buttons vertically, and the center controls must stay clickable. */
     z-index: 4;
-    display: flex;
+    /* Grid, not flex: each seek button is centered in its own 1fr track, so
+       it sits exactly halfway between the stage edge and the play button,
+       no matter how wide the stage is. */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-2xl);
+    justify-items: center;
     transition: opacity .25s ease;
     pointer-events: none;
 }
@@ -1540,26 +1543,36 @@ svg[hidden] {
 }
 
 .play-btn {
-    width: 72px;
-    height: 72px;
+    width: 56px;
+    height: 56px;
     background: var(--ember);
     box-shadow: 0 4px 20px -4px var(--ember-glow);
 }
 
 .play-btn svg {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
     fill: currentColor;
 }
 
 .play-btn .icon-spinner circle {
     stroke: currentColor;
-    stroke-dasharray: 42 14;
-    animation: spin .8s linear infinite;
+    stroke-linecap: round;
+    transform-origin: center;
+    animation: spinner-rotate 1.4s linear infinite, spinner-dash 1.4s ease-in-out infinite;
 }
 
-@keyframes spin {
+@keyframes spinner-rotate {
     to { transform: rotate(360deg); }
+}
+
+/* Grows the arc from a sliver to most of the ring then shrinks it back
+   while the whole thing spins - a "filling up" loading ring rather than
+   a plain fixed-length dash chasing its tail. */
+@keyframes spinner-dash {
+    0% { stroke-dasharray: 2 56.5; stroke-dashoffset: 0; }
+    50% { stroke-dasharray: 40 56.5; stroke-dashoffset: -14; }
+    100% { stroke-dasharray: 40 56.5; stroke-dashoffset: -55; }
 }
 
 /* Side vertical sliders */
@@ -1593,6 +1606,14 @@ svg[hidden] {
     background: rgba(255,255,255,.25);
     border-radius: 2px;
     cursor: pointer;
+    /* Only the icon shows at rest; the track and thumb fade in once the
+       user actually starts dragging (JS toggles .active on .side-slider). */
+    opacity: 0;
+    transition: opacity .2s ease;
+}
+
+.side-slider.active .v-range {
+    opacity: 1;
 }
 
 .v-range::-webkit-slider-thumb {
