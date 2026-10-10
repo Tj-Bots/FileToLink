@@ -100,34 +100,63 @@
     };
 
     // ═══════════════════════════════════════════
-    // UI STRINGS
+    // LANGUAGE — the viewer's saved choice, else the browser's language,
+    // else English. Translations live in i18n.js; a missing key falls back
+    // to English. The picker sits in the file-info row above the player.
     // ═══════════════════════════════════════════
-    const STRINGS = {
-        sleep: 'Sleep', lock: 'Lock', subtitles: 'Subtitles', audio: 'Audio', openIn: 'Open In',
-        notPlaying: 'If video not playing', useExternal: 'Use External Player', tapUnlock: 'Tap to unlock',
-        noSubs: 'No embedded subtitles found.', oneAudio: 'Only one audio track.',
-        fontSize: 'Font size', position: 'Position', subSync: 'Subtitle sync', style: 'Style',
-        outline: 'Outline', shadow: 'Shadow', background: 'Background',
-        download: 'Download', copyLink: 'Copy Link', desktop: 'Desktop', close: 'Close',
-        speed: 'Playback Speed', sleepTimer: 'Sleep Timer', openExternal: 'Open In External Player',
-        audioSubs: 'Audio & Subtitles', subSettings: 'Subtitle Settings',
-        pipActive: 'Playing in a floating window', pipReturn: 'Bring it back here',
-        off: 'Off', timerOff: 'Off', normalSpeed: 'Normal (1x)', minutes: (n) => `${n} minutes`,
-        linkCopied: 'Link copied to clipboard', copyFailed: 'Could not copy link',
-        pipUnsupported: 'Picture-in-picture is not supported here',
-        sleepPaused: 'Sleep timer: playback paused', sleepSet: (l) => `Sleep timer set: ${l}`, sleepOff: 'Sleep timer off',
-        subsLoading: 'Loading subtitles…', subsRetry: "Couldn't load subtitles, retrying…",
-        subsPreview: 'This is how subtitles will look.',
-        imageSubs: 'Image-based subtitles (PGS/VobSub) can only be shown by an external player.',
-        audioNoSwitch: "The browser can't switch audio tracks - use Open In for an external player.",
-        track: (n) => `Track ${n}`,
+    const I18N = window.__TJ_I18N__ || { rtl: [], langs: {} };
+    const LANGS = I18N.langs;
+    const LANG_KEY = 'tj_lang';
+    const pickLang = () => {
+        try {
+            const saved = localStorage.getItem(LANG_KEY);
+            if (saved && LANGS[saved]) return saved;
+        } catch { /* ignore */ }
+        for (const l of navigator.languages || [navigator.language || 'en']) {
+            let base = String(l).toLowerCase().split('-')[0];
+            if (base === 'iw') base = 'he';
+            if (LANGS[base]) return base;
+        }
+        return 'en';
     };
-    const t = (key, ...args) => {
-        const v = STRINGS[key] ?? key;
-        return typeof v === 'function' ? v(...args) : v;
+    let lang = pickLang();
+    const isRtl = () => I18N.rtl.includes(lang);
+    const t = (key, vars) => {
+        const v = LANGS[lang]?.[key] ?? LANGS.en?.[key] ?? key;
+        return vars ? v.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '') : v;
     };
-    document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
-    document.querySelectorAll('[data-i18n-aria]').forEach((el) => el.setAttribute('aria-label', t(el.dataset.i18nAria)));
+    const langListeners = [];
+
+    const applyLang = () => {
+        document.documentElement.lang = lang;
+        document.querySelectorAll('[data-i18n]').forEach((el) => {
+            el.textContent = t(el.dataset.i18n);
+            el.dir = 'auto';
+        });
+        document.querySelectorAll('[data-i18n-aria]').forEach((el) => el.setAttribute('aria-label', t(el.dataset.i18nAria)));
+        document.querySelectorAll('.sheet, .pip-placeholder').forEach((el) => {
+            if (isRtl()) el.dir = 'rtl'; else el.removeAttribute('dir');
+        });
+        langListeners.forEach((fn) => { try { fn(); } catch { /* ignore */ } });
+    };
+
+    const langSelect = document.getElementById('langSelect');
+    if (langSelect) {
+        Object.entries(LANGS).forEach(([code, strings]) => {
+            const opt = document.createElement('option');
+            opt.value = code;
+            opt.textContent = strings._name || code;
+            langSelect.appendChild(opt);
+        });
+        langSelect.value = lang;
+        langSelect.addEventListener('change', () => {
+            if (!LANGS[langSelect.value]) return;
+            lang = langSelect.value;
+            try { localStorage.setItem(LANG_KEY, lang); } catch { /* ignore */ }
+            applyLang();
+        });
+    }
+    applyLang();
 
     if (copyrightYear) copyrightYear.textContent = new Date().getFullYear();
 
@@ -205,9 +234,15 @@
     const updateTimeDisplay = () => {
         duration = video.duration || 0;
         if (timeDuration) timeDuration.textContent = formatTime(duration);
-        if (metaDuration) metaDuration.querySelector('span').textContent = formatTime(duration);
+        if (metaDuration && duration > 0) {
+            const span = metaDuration.querySelector('span');
+            span.removeAttribute('data-i18n');
+            span.textContent = formatTime(duration);
+        }
         if (metaResolution && video.videoWidth) {
-            metaResolution.querySelector('span').textContent = `${video.videoWidth}x${video.videoHeight}`;
+            const span = metaResolution.querySelector('span');
+            span.removeAttribute('data-i18n');
+            span.textContent = `${video.videoWidth}x${video.videoHeight}`;
         }
         if (!userSeeking) {
             if (seekBar && duration > 0) {
@@ -677,19 +712,14 @@
     let sleepTimerHandle = null;
     let sleepTimerMinutes = null;
 
-    const SLEEP_OPTIONS = [
-        { label: t('timerOff'), minutes: null },
-        { label: t('minutes', 10), minutes: 10 },
-        { label: t('minutes', 20), minutes: 20 },
-        { label: t('minutes', 30), minutes: 30 },
-        { label: t('minutes', 45), minutes: 45 },
-        { label: t('minutes', 60), minutes: 60 },
-    ];
+    const SLEEP_MINUTES = [null, 10, 20, 30, 45, 60];
+    const sleepLabel = (minutes) => (minutes ? t('minutes', { n: minutes }) : t('timerOff'));
 
     const renderSleepOptions = () => {
         if (!sleepOptions) return;
         sleepOptions.innerHTML = '';
-        SLEEP_OPTIONS.forEach(({ label, minutes }) => {
+        SLEEP_MINUTES.forEach((minutes) => {
+            const label = sleepLabel(minutes);
             const btn = document.createElement('button');
             btn.className = 'sheet-option' + (minutes === sleepTimerMinutes ? ' selected' : '');
             btn.textContent = label;
@@ -701,7 +731,7 @@
                         try { video?.pause(); } catch { /* ignore */ }
                         toast(t('sleepPaused'));
                     }, minutes * 60 * 1000);
-                    toast(t('sleepSet', label));
+                    toast(t('sleepSet', { l: label }));
                 } else {
                     toast(t('sleepOff'));
                 }
@@ -769,7 +799,7 @@
     const languageName = (code) => {
         if (!code || code === 'und') return null;
         try {
-            const name = new Intl.DisplayNames(['en'], { type: 'language' }).of(code);
+            const name = new Intl.DisplayNames([lang, 'en'], { type: 'language' }).of(code);
             if (name && name.toLowerCase() !== code.toLowerCase()) return name;
         } catch { /* fall through */ }
         return code.toUpperCase();
@@ -1002,7 +1032,7 @@
 
                 subtitleTracks.forEach((track, index) => {
                     const lang = languageName(track.language);
-                    const btn = optionWithLabels(lang || track.name || t('track', index + 1), lang ? track.name : null);
+                    const btn = optionWithLabels(lang || track.name || t('track', { n: index + 1 }), lang ? track.name : null);
                     const usable = !track.codec || track.codec.startsWith('S_TEXT/');
                     if (!usable) {
                         btn.disabled = true;
@@ -1025,7 +1055,7 @@
                 audioOptions.innerHTML = `<div class="sheet-empty">${t('oneAudio')}</div>`;
             } else {
                 audioTracks.forEach((track, index) => {
-                    const row = optionWithLabels(languageName(track.language) || track.name || t('track', index + 1), track.name);
+                    const row = optionWithLabels(languageName(track.language) || track.name || t('track', { n: index + 1 }), track.name);
                     row.disabled = true;
                     row.title = t('audioNoSwitch');
                     audioOptions.appendChild(row);
@@ -1049,6 +1079,7 @@
     };
 
     initTracks();
+    langListeners.push(renderTrackSheets, () => { shownCueKey = ''; renderCues(); });
 
     [tracksBtn, topTracksBtn].forEach((btn) => btn?.addEventListener('click', (e) => {
         e.stopPropagation();
