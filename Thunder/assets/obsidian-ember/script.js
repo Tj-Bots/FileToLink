@@ -77,6 +77,14 @@
         setTimeout(() => el.remove(), 2600);
     };
 
+    // The `hidden` IDL property doesn't reliably reflect to the attribute on
+    // SVG elements in every browser, so toggle the attribute directly -
+    // that works for every element type.
+    const setHidden = (el, hide) => {
+        if (!el) return;
+        el.toggleAttribute('hidden', hide);
+    };
+
     if (copyrightYear) copyrightYear.textContent = new Date().getFullYear();
 
     // ═══════════════════════════════════════════
@@ -100,47 +108,107 @@
     const allSheets = [speedSheet, sleepSheet, tracksSheet, openInSheet].filter(Boolean);
 
     const closeSheets = () => {
-        allSheets.forEach((s) => { s.hidden = true; });
-        if (sheetBackdrop) sheetBackdrop.hidden = true;
+        allSheets.forEach((s) => setHidden(s, true));
+        setHidden(sheetBackdrop, true);
     };
 
     const openSheet = (sheet) => {
         closeSheets();
         if (!sheet) return;
-        sheet.hidden = false;
-        if (sheetBackdrop) sheetBackdrop.hidden = false;
+        setHidden(sheet, false);
+        setHidden(sheetBackdrop, false);
     };
 
     sheetBackdrop?.addEventListener('click', closeSheets);
 
     // ═══════════════════════════════════════════
-    // PLAYER WIRING
+    // PLAYER WIRING — operates on the native <video>
+    // element directly (standard HTMLMediaElement /
+    // TextTrack APIs) rather than vidstack's own
+    // subscribe()/textTracks.add() proxy, which turned
+    // out not to behave as documented in this player
+    // version: play/pause state never reflected and
+    // added text tracks never actually showed captions.
     // ═══════════════════════════════════════════
     if (!player) return;
 
     let duration = 0;
     let userSeeking = false;
+    let video = null;
 
-    const setPlayButtonState = ({ paused, waiting, ended }) => {
-        const showSpinner = !!waiting;
-        const showPause = !paused && !showSpinner && !ended;
-        if (iconPlay) iconPlay.hidden = showPause || showSpinner;
-        if (iconPause) iconPause.hidden = !showPause;
-        if (iconSpinner) iconSpinner.hidden = !showSpinner;
+    const setPlayButtonState = () => {
+        if (!video) return;
+        const showSpinner = video.readyState < 3 && !video.paused && !video.ended;
+        const showPause = !video.paused && !showSpinner && !video.ended;
+        setHidden(iconPlay, showPause || showSpinner);
+        setHidden(iconPause, !showPause);
+        setHidden(iconSpinner, !showSpinner);
     };
 
     const togglePlay = () => {
+        if (!video) return;
         try {
-            if (player.paused) {
-                const p = player.play();
-                p?.catch?.(() => {});
+            if (video.paused) {
+                video.play()?.catch?.(() => {});
             } else {
-                player.pause();
+                video.pause();
             }
         } catch {
-            // Ignore - player may not be ready yet.
+            // Ignore.
         }
     };
+
+    const updateTimeDisplay = () => {
+        if (!video) return;
+        duration = video.duration || 0;
+        if (timeDuration) timeDuration.textContent = formatTime(duration);
+        if (!userSeeking) {
+            if (seekBar && duration > 0) {
+                const pct = Math.min(1000, Math.max(0, (video.currentTime / duration) * 1000));
+                seekBar.value = String(pct);
+                seekBar.style.setProperty('--fill', `${pct / 10}%`);
+            }
+            if (timeCurrent) timeCurrent.textContent = formatTime(video.currentTime || 0);
+        }
+    };
+
+    const onVideoReady = (el) => {
+        if (video === el) return;
+        video = el;
+
+        ['play', 'pause', 'waiting', 'playing', 'canplay', 'ended'].forEach((evt) => {
+            video.addEventListener(evt, setPlayButtonState);
+        });
+        video.addEventListener('timeupdate', updateTimeDisplay);
+        video.addEventListener('durationchange', updateTimeDisplay);
+        video.addEventListener('loadedmetadata', updateTimeDisplay);
+        video.addEventListener('volumechange', () => {
+            if (!volumeSlider) return;
+            const pct = video.muted ? 0 : Math.round(video.volume * 100);
+            volumeSlider.value = String(pct);
+            if (volumeIcon) volumeIcon.style.opacity = pct === 0 ? '.5' : '1';
+        });
+        video.addEventListener('ratechange', () => {
+            if (!speedLabel) return;
+            const rate = video.playbackRate || 1;
+            speedLabel.textContent = rate === 1 ? '1x' : `${rate}x`;
+        });
+        video.addEventListener('error', () => {
+            setHidden(bgMessage, false);
+        });
+
+        setPlayButtonState();
+        updateTimeDisplay();
+        initTracks();
+    };
+
+    // The native <video> is created lazily inside <media-provider>; watch
+    // for it rather than relying on any particular vidstack lifecycle event.
+    const videoWatcher = new MutationObserver(() => {
+        const el = stage?.querySelector('video');
+        if (el) onVideoReady(el);
+    });
+    videoWatcher.observe(stage, { childList: true, subtree: true });
 
     customElements.whenDefined('media-player').then(() => {
         const isSupportedAudio = /\.(mp3|wav|ogg|flac|m4a|aac)(\?.*)?$/i.test(VIDEO_SRC);
@@ -154,30 +222,9 @@
             player.src = { src: VIDEO_SRC, type: 'video/mp4' };
         }
 
-        player.subscribe((state) => {
-            duration = state.duration || 0;
-            if (timeDuration) timeDuration.textContent = formatTime(duration);
-            if (!userSeeking && seekBar && duration > 0) {
-                const pct = Math.min(1000, Math.max(0, (state.currentTime / duration) * 1000));
-                seekBar.value = String(pct);
-                seekBar.style.setProperty('--fill', `${pct / 10}%`);
-            }
-            if (!userSeeking && timeCurrent) {
-                timeCurrent.textContent = formatTime(state.currentTime || 0);
-            }
-            setPlayButtonState(state);
-
-            if (state.error && bgMessage) {
-                bgMessage.hidden = false;
-            }
-
-            if (speedLabel) {
-                const rate = state.playbackRate || 1;
-                speedLabel.textContent = rate === 1 ? '1x' : `${rate}x`;
-            }
-        });
-
-        initTracks();
+        // In case the <video> already exists by the time src is set.
+        const el = stage?.querySelector('video');
+        if (el) onVideoReady(el);
     });
 
     // ═══════════════════════════════════════════
@@ -188,7 +235,7 @@
         stage?.removeAttribute('data-hidden');
         clearTimeout(hideTimer);
         hideTimer = setTimeout(() => {
-            if (!player.paused) stage?.setAttribute('data-hidden', '');
+            if (video && !video.paused) stage?.setAttribute('data-hidden', '');
         }, 3200);
     };
 
@@ -231,7 +278,6 @@
     });
 
     pipBtn?.addEventListener('click', async () => {
-        const video = stage?.querySelector('video');
         if (!video) return;
         try {
             if (document.pictureInPictureElement) {
@@ -255,18 +301,30 @@
         showControls();
     });
 
+    const flashSeek = (btn, delta) => {
+        if (!btn) return;
+        btn.classList.remove('seek-pulse');
+        // Force reflow so re-adding the class restarts the animation on a
+        // quick double-tap instead of being a no-op.
+        void btn.offsetWidth;
+        btn.classList.add('seek-pulse');
+        const flash = document.createElement('span');
+        flash.className = 'seek-flash';
+        flash.textContent = delta > 0 ? `+${delta}` : `${delta}`;
+        btn.appendChild(flash);
+        setTimeout(() => flash.remove(), 650);
+        setTimeout(() => btn.classList.remove('seek-pulse'), 650);
+    };
+
     const seekBy = (delta) => {
-        try {
-            const t = (player.currentTime || 0) + delta;
-            player.currentTime = Math.min(duration || Infinity, Math.max(0, t));
-        } catch {
-            // Ignore.
+        if (video) {
+            video.currentTime = Math.min(duration || Infinity, Math.max(0, (video.currentTime || 0) + delta));
         }
         showControls();
     };
 
-    seekBackBtn?.addEventListener('click', (e) => { e.stopPropagation(); seekBy(-10); });
-    seekFwdBtn?.addEventListener('click', (e) => { e.stopPropagation(); seekBy(10); });
+    seekBackBtn?.addEventListener('click', (e) => { e.stopPropagation(); flashSeek(seekBackBtn, -10); seekBy(-10); });
+    seekFwdBtn?.addEventListener('click', (e) => { e.stopPropagation(); flashSeek(seekFwdBtn, 10); seekBy(10); });
 
     // ═══════════════════════════════════════════
     // SEEK BAR
@@ -280,12 +338,8 @@
     });
 
     seekBar?.addEventListener('change', () => {
-        if (duration > 0) {
-            try {
-                player.currentTime = (Number(seekBar.value) / 1000) * duration;
-            } catch {
-                // Ignore.
-            }
+        if (video && duration > 0) {
+            video.currentTime = (Number(seekBar.value) / 1000) * duration;
         }
         userSeeking = false;
     });
@@ -294,18 +348,15 @@
     // SIDE SLIDERS: brightness / volume
     // ═══════════════════════════════════════════
     brightnessSlider?.addEventListener('input', () => {
-        const video = stage?.querySelector('video');
         if (video) video.style.filter = `brightness(${brightnessSlider.value}%)`;
         showControls();
     });
 
     volumeSlider?.addEventListener('input', () => {
         const val = Number(volumeSlider.value);
-        try {
-            player.volume = val / 100;
-            player.muted = val === 0;
-        } catch {
-            // Ignore.
+        if (video) {
+            video.volume = val / 100;
+            video.muted = val === 0;
         }
         if (volumeIcon) volumeIcon.style.opacity = val === 0 ? '.5' : '1';
         showControls();
@@ -318,14 +369,14 @@
 
     const renderSpeedOptions = () => {
         if (!speedOptions) return;
-        const current = player.playbackRate || 1;
+        const current = video?.playbackRate || 1;
         speedOptions.innerHTML = '';
         SPEEDS.forEach((rate) => {
             const btn = document.createElement('button');
             btn.className = 'sheet-option' + (rate === current ? ' selected' : '');
             btn.textContent = rate === 1 ? 'Normal (1x)' : `${rate}x`;
             btn.addEventListener('click', () => {
-                try { player.playbackRate = rate; } catch { /* ignore */ }
+                try { if (video) video.playbackRate = rate; } catch { /* ignore */ }
                 closeSheets();
             });
             speedOptions.appendChild(btn);
@@ -364,7 +415,7 @@
                 sleepTimerMinutes = minutes;
                 if (minutes) {
                     sleepTimerHandle = setTimeout(() => {
-                        try { player.pause(); } catch { /* ignore */ }
+                        try { video?.pause(); } catch { /* ignore */ }
                         toast('Sleep timer: playback paused');
                     }, minutes * 60 * 1000);
                     toast(`Sleep timer set: ${label}`);
@@ -387,12 +438,12 @@
     // ═══════════════════════════════════════════
     lockBtn?.addEventListener('click', () => {
         stage?.setAttribute('data-locked', '');
-        if (unlockBtn) unlockBtn.hidden = false;
+        setHidden(unlockBtn, false);
     });
 
     unlockBtn?.addEventListener('click', () => {
         stage?.removeAttribute('data-locked');
-        if (unlockBtn) unlockBtn.hidden = true;
+        setHidden(unlockBtn, true);
         showControls();
     });
 
@@ -419,9 +470,9 @@
                 offBtn.className = 'sheet-option selected';
                 offBtn.textContent = 'Off';
                 offBtn.addEventListener('click', () => {
-                    Array.from(player.textTracks || []).forEach((t) => {
-                        if (t.kind === 'subtitles' || t.kind === 'captions') t.mode = 'disabled';
-                    });
+                    if (video) {
+                        Array.from(video.textTracks || []).forEach((t) => { t.mode = 'disabled'; });
+                    }
                     syncSelectedOption(subtitleOptions, offBtn);
                     closeSheets();
                 });
@@ -434,12 +485,12 @@
                     btn.className = 'sheet-option';
                     btn.textContent = label;
                     btn.addEventListener('click', () => {
-                        ensureSubtitleAdded(track, index);
-                        Array.from(player.textTracks || []).forEach((t) => {
-                            if (t.kind === 'subtitles' || t.kind === 'captions') {
-                                t.mode = (t.language === track.language && t.label === label) ? 'showing' : 'disabled';
-                            }
-                        });
+                        const trackEl = ensureSubtitleAdded(track, index);
+                        if (video) {
+                            Array.from(video.textTracks || []).forEach((t) => {
+                                t.mode = (trackEl && t.label === trackEl.label) ? 'showing' : 'disabled';
+                            });
+                        }
                         syncSelectedOption(subtitleOptions, btn);
                         closeSheets();
                     });
@@ -476,28 +527,25 @@
         selectedBtn.classList.add('selected');
     };
 
-    const addedSubtitles = new Set();
+    const addedSubtitleTrackEls = new Map();
 
     const ensureSubtitleAdded = (track, index) => {
         const key = `${track.number}`;
-        if (addedSubtitles.has(key)) return;
+        if (addedSubtitleTrackEls.has(key)) return addedSubtitleTrackEls.get(key);
+        if (!video || track.number == null) return null;
         const subUrl = deriveAuxUrl('subtitle');
-        if (!subUrl || track.number == null) return;
+        if (!subUrl) return null;
         subUrl.searchParams.set('track', track.number);
         const hasLanguage = track.language && track.language !== 'und';
         const label = track.name || (hasLanguage ? track.language.toUpperCase() : `Track ${index + 1}`);
-        try {
-            player.textTracks.add({
-                src: subUrl.toString(),
-                kind: 'subtitles',
-                label,
-                language: hasLanguage ? track.language : undefined,
-                type: 'vtt',
-            });
-            addedSubtitles.add(key);
-        } catch {
-            // Fail quietly — surfaced tracks just won't be selectable.
-        }
+        const trackEl = document.createElement('track');
+        trackEl.kind = 'subtitles';
+        trackEl.label = label;
+        if (hasLanguage) trackEl.srclang = track.language;
+        trackEl.src = subUrl.toString();
+        video.appendChild(trackEl);
+        addedSubtitleTrackEls.set(key, trackEl);
+        return trackEl;
     };
 
     const initTracks = async () => {
@@ -544,7 +592,7 @@
                 } catch { /* ignore */ }
                 break;
             case 'm':
-                try { player.muted = !player.muted; } catch { /* ignore */ }
+                try { if (video) video.muted = !video.muted; } catch { /* ignore */ }
                 break;
             case 'Escape':
                 closeSheets();

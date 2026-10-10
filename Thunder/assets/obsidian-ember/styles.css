@@ -1459,12 +1459,57 @@ svg[hidden] {
 .seek-btn {
     width: 52px;
     height: 52px;
+    position: relative;
 }
 
 .seek-btn svg {
     width: 24px;
     height: 24px;
     fill: currentColor;
+    transition: transform .5s var(--ease-out-back, ease);
+}
+
+.seek-btn.seek-pulse svg {
+    transform: rotate(-220deg);
+}
+
+#seekFwdBtn.seek-pulse svg {
+    transform: rotate(220deg);
+}
+
+.seek-flash {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ember);
+    color: #fff;
+    font-size: .6875rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: seekFlashPop .65s ease forwards;
+}
+
+@keyframes seekFlashPop {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, 4px) scale(.8);
+    }
+    25% {
+        opacity: 1;
+        transform: translate(-50%, -6px) scale(1);
+    }
+    75% {
+        opacity: 1;
+        transform: translate(-50%, -10px) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -16px) scale(.9);
+    }
 }
 
 .seek-btn span {
