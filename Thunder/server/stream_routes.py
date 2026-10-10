@@ -7,7 +7,9 @@ import time
 from urllib.parse import quote, unquote
 
 from aiohttp import web
+from pyrogram import raw
 from pyrogram.errors import FloodWait
+from pyrogram.file_id import FileId
 
 from Thunder import __version__, StartTime
 from Thunder.bot import StreamBot, multi_clients, work_loads
@@ -21,7 +23,10 @@ from Thunder.utils.canonical_files import (
 from Thunder.utils.custom_dl import ByteStreamer
 from Thunder.utils.file_properties import get_media
 from Thunder.utils.logger import logger
-from Thunder.utils.mkv_subtitles import WINDOW_MS, MkvIndex, extract_subtitle_window, load_index
+from Thunder.utils.mkv_subtitles import (
+    WINDOW_MS, MkvIndex, extract_subtitle_window, load_index, read_chunk_range,
+    subtitle_track_indexed,
+)
 from Thunder.utils.render_template import render_media_page, render_page
 from Thunder.utils.time_format import get_readable_time
 from Thunder.vars import Var
@@ -453,16 +458,27 @@ async def canonical_media_delivery(request: web.Request):
 
 
 class _ChunkFetcher:
-    """fetch(i) -> the i-th 1 MiB chunk of a Telegram file, deduplicated and
-    with bounded parallelism, for the Matroska index/subtitle readers."""
+    """Reads a Telegram file for the Matroska index/subtitle readers.
+
+    fetch(i) returns the i-th 1 MiB chunk (used for the file head, the Cues
+    index and the rare unindexed-subtitle scan). fetch.read_range(start, n)
+    returns just those bytes, downloaded in 4 KiB-aligned pieces with
+    upload.getFile's `precise` flag - so reading one subtitle line costs a
+    few KiB, not the megabyte of video around it.
+    """
+
+    PIECE = 4096
 
     def __init__(self, streamer: ByteStreamer, media_ref: int):
         self._streamer = streamer
         self._media_ref = media_ref
         self._message = None
+        self._location = None
         self._message_lock = asyncio.Lock()
         self._chunks: dict[int, asyncio.Future] = {}
+        self._pieces: dict[tuple, asyncio.Future] = {}
         self._sem = asyncio.Semaphore(6)
+        self._precise_ok = True
 
     async def _get_message(self):
         async with self._message_lock:
@@ -492,6 +508,80 @@ class _ChunkFetcher:
         except Exception:
             self._chunks.pop(idx, None)
             raise
+
+    async def _media_session(self):
+        """The media DC session pyrogram itself uses for this file; created
+        (by pyrogram) on first use with a 1 MiB read if it doesn't exist yet."""
+        client = self._streamer.client
+        message = await self._get_message()
+        if self._location is None:
+            file_id = FileId.decode(get_media(message).file_id)
+            self._location = (file_id.dc_id, raw.types.InputDocumentFileLocation(
+                id=file_id.media_id,
+                access_hash=file_id.access_hash,
+                file_reference=file_id.file_reference,
+                thumb_size=file_id.thumbnail_size,
+            ))
+        dc_id, location = self._location
+        session = client.media_sessions.get(dc_id)
+        if session is None:
+            await self(0)
+            session = client.media_sessions.get(dc_id)
+        return session, location
+
+    async def _download_piece(self, offset: int, limit: int) -> bytes:
+        session, location = await self._media_session()
+        if session is None:
+            raise RuntimeError("no media session")
+        async with self._sem:
+            for _attempt in range(3):
+                try:
+                    r = await session.invoke(raw.functions.upload.GetFile(
+                        location=location, offset=offset, limit=limit, precise=True))
+                    if isinstance(r, raw.types.upload.File):
+                        return bytes(r.bytes)
+                    raise RuntimeError(f"unexpected {type(r).__name__}")
+                except FloodWait as e:
+                    await asyncio.sleep(e.value)
+            return b""
+
+    async def _piece(self, offset: int, limit: int) -> bytes:
+        idx = offset // CHUNK_SIZE
+        whole = self._chunks.get(idx)
+        if whole is not None and whole.done() and not whole.exception():
+            base = offset - idx * CHUNK_SIZE
+            return whole.result()[base:base + limit]
+        key = (offset, limit)
+        task = self._pieces.get(key)
+        if task is None:
+            task = asyncio.ensure_future(self._download_piece(offset, limit))
+            self._pieces[key] = task
+        try:
+            return await task
+        except Exception:
+            self._pieces.pop(key, None)
+            raise
+
+    async def read_range(self, start: int, length: int) -> bytes:
+        if length <= 0:
+            return b""
+        if self._precise_ok:
+            try:
+                begin = start - start % self.PIECE
+                end = -(-(start + length) // self.PIECE) * self.PIECE
+                parts = []
+                pos = begin
+                # One request may not cross a 1 MiB boundary.
+                while pos < end:
+                    stop = min(end, (pos // CHUNK_SIZE + 1) * CHUNK_SIZE)
+                    parts.append(self._piece(pos, stop - pos))
+                    pos = stop
+                data = b"".join(await asyncio.gather(*parts))
+                return data[start - begin:start - begin + length]
+            except Exception as e:
+                logger.debug(f"precise range read failed, using 1 MiB chunks: {e}", exc_info=True)
+                self._precise_ok = False
+        return await read_chunk_range(self, start, length)
 
 
 def _trim_cache(cache: dict, limit: int) -> None:
@@ -523,19 +613,23 @@ def _public_tracks(index: MkvIndex | None) -> list:
 
 async def _get_subtitle_window(cache_key: tuple, streamer: ByteStreamer, media_ref: int,
                                track_number: int, window: int):
-    key = (*cache_key, track_number, window)
-    if key in _window_cache:
-        return _window_cache[key]
+    """(cues | None, indexed). `indexed` means every subtitle block of the
+    track is in the file's Cues index, so reading it costs only a few KiB per
+    line - the player then preloads the rest of the track in the background."""
     index = await _get_index(cache_key, streamer, media_ref)
     if index is None:
-        return None
+        return None, False
+    indexed = subtitle_track_indexed(index, track_number)
+    key = (*cache_key, track_number, window)
+    if key in _window_cache:
+        return _window_cache[key], indexed
     cues = await extract_subtitle_window(
         _ChunkFetcher(streamer, media_ref), index, track_number,
         window * WINDOW_MS, (window + 1) * WINDOW_MS)
     if cues is not None:
         _window_cache[key] = cues
         _trim_cache(_window_cache, _WINDOW_CACHE_MAX)
-    return cues
+    return cues, indexed
 
 
 def _parse_track_query(request: web.Request) -> tuple[int, int]:
@@ -547,11 +641,12 @@ def _parse_track_query(request: web.Request) -> tuple[int, int]:
     return track, max(0, int(at * 1000) // WINDOW_MS)
 
 
-def _subtitle_response(cues, window: int) -> web.Response:
+def _subtitle_response(result, window: int) -> web.Response:
+    cues, indexed = result
     if cues is None:
         raise FileNotFound("Subtitle track not found or not a text subtitle track")
     return web.json_response(
-        {"from": window * WINDOW_MS, "to": (window + 1) * WINDOW_MS, "cues": cues},
+        {"from": window * WINDOW_MS, "to": (window + 1) * WINDOW_MS, "indexed": indexed, "cues": cues},
         headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=86400"})
 
 
@@ -599,11 +694,11 @@ async def canonical_subtitle(request: web.Request):
         client_id, streamer = select_optimal_client()
         work_loads[client_id] += 1
         try:
-            cues = await _get_subtitle_window(
+            result = await _get_subtitle_window(
                 ("f", secure_hash), streamer, media_ref, track_number, window)
         finally:
             work_loads[client_id] -= 1
-        return _subtitle_response(cues, window)
+        return _subtitle_response(result, window)
     except (InvalidHash, FileNotFound) as e:
         raise web.HTTPNotFound(text="Resource not found") from e
     except web.HTTPException:
@@ -660,11 +755,11 @@ async def adhoc_subtitle(request: web.Request):
             unique_id = _resolve_unique_id(file_info)
             if unique_id[:SECURE_HASH_LENGTH] != secure_hash:
                 raise InvalidHash("Provided hash does not match file's unique ID.")
-            cues = await _get_subtitle_window(
+            result = await _get_subtitle_window(
                 ("adhoc", secure_hash, message_id), streamer, message_id, track_number, window)
         finally:
             work_loads[client_id] -= 1
-        return _subtitle_response(cues, window)
+        return _subtitle_response(result, window)
     except (InvalidHash, FileNotFound) as e:
         raise web.HTTPNotFound(text="Resource not found") from e
     except web.HTTPException:

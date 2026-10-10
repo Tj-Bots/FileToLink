@@ -818,6 +818,7 @@
             const data = await res.json();
             if (gen !== subGeneration) return;
             mergeCues(Array.isArray(data?.cues) ? data.cues : []);
+            subIndexed = data?.indexed === true;
             subWindows.set(idx, 'done');
             shownCueKey = '';
             renderCues();
@@ -833,11 +834,13 @@
 
     // After the minute under the playhead is in, keep pulling the rest of the
     // track one minute at a time (ahead of the playhead first, then from the
-    // start), so seeking anywhere later already has its subtitles. The server
-    // caches every minute, so the next viewer of the file gets them at once.
+    // start), so seeking anywhere later already has its subtitles. Only for
+    // files whose subtitle blocks are indexed: the server then reads just
+    // those few KiB per line, never the video around them.
     let subFillBusy = false;
+    let subIndexed = false;
     const scheduleSubFill = () => {
-        if (subFillBusy || subTrack == null || !(duration > 0)) return;
+        if (subFillBusy || subTrack == null || !subIndexed || !(duration > 0)) return;
         const total = Math.ceil(duration / SUB_WINDOW_S);
         const here = Math.max(0, Math.floor(video.currentTime / SUB_WINDOW_S));
         let next = -1;
@@ -875,6 +878,7 @@
         subGeneration += 1;
         subTrack = trackNumber;
         subCues = [];
+        subIndexed = false;
         clearPipCues();
         subWindows = new Map();
         subLoadingToastShown = false;

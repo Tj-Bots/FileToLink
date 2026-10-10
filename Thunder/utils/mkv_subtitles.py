@@ -397,6 +397,15 @@ async def _chunks_from(fetch, abs_pos: int, max_chunks: int):
 
 
 async def read_range(fetch, start: int, length: int) -> bytes:
+    # A fetcher that can download arbitrary small ranges does so; otherwise
+    # assemble the range from whole chunks.
+    ranged = getattr(fetch, "read_range", None)
+    if ranged is not None:
+        return await ranged(start, length)
+    return await read_chunk_range(fetch, start, length)
+
+
+async def read_chunk_range(fetch, start: int, length: int) -> bytes:
     out = bytearray()
     pos = start
     end = start + length
@@ -657,6 +666,11 @@ async def _scan_window_linear(fetch, index: MkvIndex, track: Dict[str, Any],
     except Exception as e:
         logger.debug(f"mkv_subtitles linear window: {e}", exc_info=True)
     return cues
+
+
+def subtitle_track_indexed(index: MkvIndex, track_number: int) -> bool:
+    points = index.cue_points.get(track_number) or []
+    return bool(points) and all(p[2] is not None for p in points)
 
 
 async def extract_subtitle_window(fetch, index: MkvIndex, track_number: int,
