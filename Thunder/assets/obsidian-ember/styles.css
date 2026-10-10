@@ -1297,18 +1297,149 @@ html, body {
     margin: 0;
 }
 
+/* The stage holds position:fixed children (sheets, toasts, and itself in
+   the fallback fullscreen), so no ancestor may carry a transform - the
+   original fadeScaleUp entrance left one behind. Fade only. */
+.cinema {
+    animation: stageFadeIn .8s var(--ease-out-expo) .3s forwards;
+    will-change: opacity;
+}
+
+@keyframes stageFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 .player-stage {
     position: relative;
     width: 100%;
     height: 100%;
     background: #000;
     overflow: hidden;
-    touch-action: none;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-.player-stage:fullscreen {
+.player-stage[data-expanded] {
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
+}
+
+.player-stage[data-pseudo-fs] {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+}
+
+body.player-pseudo-fs {
+    overflow: hidden;
+}
+
+/* Compact (page-embedded) vs expanded (fullscreen, app-style) controls */
+.player-stage:not([data-expanded]) .expanded-only,
+.player-stage[data-expanded] .compact-only {
+    display: none !important;
+}
+
+.player-stage:not([data-expanded]) .ov-top {
+    padding: 6px 6px 22px 14px;
+}
+
+.player-stage:not([data-expanded]) .ov-title {
+    font-size: .875rem;
+}
+
+.player-stage:not([data-expanded]) .icon-btn {
+    width: 36px;
+    height: 36px;
+}
+
+.player-stage:not([data-expanded]) .icon-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.player-stage:not([data-expanded]) .ov-bottom {
+    padding: 22px 12px 8px;
+}
+
+.player-stage:not([data-expanded]) .seek-row {
+    margin-bottom: 0;
+}
+
+.player-stage:not([data-expanded]) .seek-btn {
+    width: 44px;
+    height: 44px;
+}
+
+.player-stage:not([data-expanded]) .seek-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.player-stage:not([data-expanded]) .play-btn {
+    width: 52px;
+    height: 52px;
+}
+
+.player-stage:not([data-expanded]) .play-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
+.sub-overlay {
+    position: absolute;
+    left: 4%;
+    right: 4%;
+    bottom: 12%;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    pointer-events: none;
+    text-align: center;
+    font-family: var(--font-body), system-ui, sans-serif;
+    font-weight: 500;
+    line-height: 1.3;
+    transition: bottom .25s ease;
+}
+
+.sub-line {
+    max-width: 100%;
+    unicode-bidi: plaintext;
+    white-space: pre-line;
+    color: #fff;
+    background: rgba(0, 0, 0, .55);
+    padding: .08em .45em;
+    border-radius: 4px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .9);
+}
+
+.sub-line:empty {
+    display: none;
+}
+
+/* Larger frame on desktop - scale the compact center controls up a bit */
+@media (min-width: 900px) {
+    .player-stage:not([data-expanded]) .seek-btn {
+        width: 52px;
+        height: 52px;
+    }
+
+    .player-stage:not([data-expanded]) .play-btn {
+        width: 60px;
+        height: 60px;
+    }
+}
+
+.speed-text-btn span {
+    font-family: var(--font-display);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .02em;
 }
 
 .player-stage video {
@@ -1409,6 +1540,10 @@ svg[hidden] {
 }
 
 .ov-center > * { pointer-events: auto; }
+
+/* Hidden controls must not keep catching taps - a tap anywhere should
+   bring the controls back, not blindly hit an invisible play button. */
+.player-stage[data-hidden] .ov-center > * { pointer-events: none; }
 
 /* Top bar */
 .ov-top {
@@ -1867,4 +2002,9 @@ svg[hidden] {
         border-radius: 16px;
         max-height: 60vh;
     }
+}
+/* Page command bar: keep the labels on small screens too - icon-only
+   copy/open buttons read as unexplained glyphs under the big Download. */
+.cmd-btn span {
+    display: inline;
 }

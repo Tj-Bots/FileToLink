@@ -44,6 +44,9 @@
 
     const speedBtn = document.getElementById('speedBtn');
     const speedLabel = document.getElementById('speedLabel');
+    const topSpeedBtn = document.getElementById('topSpeedBtn');
+    const topSpeedLabel = document.getElementById('topSpeedLabel');
+    const topTracksBtn = document.getElementById('topTracksBtn');
     const sleepBtn = document.getElementById('sleepBtn');
     const lockBtn = document.getElementById('lockBtn');
     const unlockBtn = document.getElementById('unlockBtn');
@@ -197,9 +200,10 @@
         if (volumeIcon) volumeIcon.style.opacity = pct === 0 ? '.5' : '1';
     });
     video.addEventListener('ratechange', () => {
-        if (!speedLabel) return;
         const rate = video.playbackRate || 1;
-        speedLabel.textContent = rate === 1 ? '1x' : `${rate}x`;
+        const text = rate === 1 ? '1x' : `${rate}x`;
+        if (speedLabel) speedLabel.textContent = text;
+        if (topSpeedLabel) topSpeedLabel.textContent = text;
     });
     video.addEventListener('error', () => {
         setHidden(bgMessage, false);
@@ -212,23 +216,61 @@
     // ═══════════════════════════════════════════
     // FULLSCREEN
     // ═══════════════════════════════════════════
+    // The page shows a compact player; "expanded" is the full app-style
+    // layout. It uses the real Fullscreen API where the browser allows it
+    // on an element, and otherwise (iPhone Safari, some in-app browsers)
+    // falls back to a fixed full-viewport overlay.
+    const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+    const isExpanded = () => stage?.hasAttribute('data-expanded');
+
+    const setExpanded = (on, pseudo) => {
+        stage?.toggleAttribute('data-expanded', on);
+        stage?.toggleAttribute('data-pseudo-fs', on && pseudo);
+        document.body.classList.toggle('player-pseudo-fs', on && pseudo);
+        setHidden(iconFsEnter, on);
+        setHidden(iconFsExit, !on);
+        closeSheets();
+        showControls();
+    };
+
+    const lockLandscape = () => {
+        if (video.videoWidth && video.videoWidth < video.videoHeight) return;
+        try { screen.orientation?.lock?.('landscape')?.catch?.(() => {}); } catch { /* ignore */ }
+    };
+
     const toggleFullscreen = () => {
-        try {
-            if (document.fullscreenElement) {
-                document.exitFullscreen();
+        if (isExpanded()) {
+            if (fsElement()) {
+                (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {});
             } else {
-                stage?.requestFullscreen?.();
+                setExpanded(false, false);
+            }
+            try { screen.orientation?.unlock?.(); } catch { /* ignore */ }
+            return;
+        }
+        const request = stage?.requestFullscreen || stage?.webkitRequestFullscreen;
+        if (!request) {
+            setExpanded(true, true);
+            return;
+        }
+        try {
+            const result = request.call(stage);
+            if (result && typeof result.then === 'function') {
+                result.then(lockLandscape).catch(() => setExpanded(true, true));
+            } else {
+                lockLandscape();
             }
         } catch {
-            // Ignore.
+            setExpanded(true, true);
         }
     };
 
-    document.addEventListener('fullscreenchange', () => {
-        const isFs = document.fullscreenElement === stage;
-        setHidden(iconFsEnter, isFs);
-        setHidden(iconFsExit, !isFs);
-    });
+    const onFullscreenChange = () => {
+        const fs = fsElement() === stage;
+        if (fs !== isExpanded() || stage?.hasAttribute('data-pseudo-fs')) setExpanded(fs, false);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
     fullscreenBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -262,9 +304,9 @@
     // ═══════════════════════════════════════════
     // TOP BAR
     // ═══════════════════════════════════════════
-    backBtn?.addEventListener('click', () => {
-        if (window.history.length > 1) window.history.back();
-        else window.location.href = '/';
+    backBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (isExpanded()) toggleFullscreen();
     });
 
     shareBtn?.addEventListener('click', async () => {
@@ -413,10 +455,11 @@
         });
     };
 
-    speedBtn?.addEventListener('click', () => {
+    [speedBtn, topSpeedBtn].forEach((btn) => btn?.addEventListener('click', (e) => {
+        e.stopPropagation();
         renderSpeedOptions();
         openSheet(speedSheet);
-    });
+    }));
 
     // ═══════════════════════════════════════════
     // SLEEP TIMER SHEET
@@ -509,14 +552,14 @@
                 // Reflect whatever is actually showing right now, not just "Off" -
                 // this sheet gets rebuilt every time it's opened, so it must not
                 // forget a selection that's already active on the video.
-                const activeLabel = Array.from(video.textTracks || [])
-                    .find((t) => t.mode === 'showing')?.label || null;
+                const activeLabel = activeSubTrack()?.label || null;
 
                 const offBtn = document.createElement('button');
                 offBtn.className = 'sheet-option' + (activeLabel ? '' : ' selected');
                 offBtn.textContent = 'Off';
                 offBtn.addEventListener('click', () => {
                     Array.from(video.textTracks || []).forEach((t) => { t.mode = 'disabled'; });
+                    renderCues();
                     syncSelectedOption(subtitleOptions, offBtn);
                     closeSheets();
                 });
@@ -531,8 +574,12 @@
                     btn.addEventListener('click', () => {
                         const trackEl = ensureSubtitleAdded(track, index);
                         Array.from(video.textTracks || []).forEach((t) => {
-                            t.mode = (trackEl && t.label === trackEl.label) ? 'showing' : 'disabled';
+                            // 'hidden' = cues load and fire cuechange, but the
+                            // browser doesn't draw them; our overlay does.
+                            t.mode = (trackEl && t.label === trackEl.label) ? 'hidden' : 'disabled';
+                            watchCues(t);
                         });
+                        renderCues();
                         syncSelectedOption(subtitleOptions, btn);
                         closeSheets();
                     });
@@ -571,6 +618,64 @@
 
     const addedSubtitleTrackEls = new Map();
 
+    // ═══════════════════════════════════════════
+    // SUBTITLE RENDERING — our own overlay instead of the browser's, so
+    // the text sits on the actual picture (not the bottom of a letterboxed
+    // fullscreen screen), lifts above the control bar while it's showing,
+    // and lays out each line by its own direction (Hebrew/Arabic RTL with
+    // punctuation on the correct side).
+    // ═══════════════════════════════════════════
+    const subOverlay = document.getElementById('subOverlay');
+    const ovBottom = document.getElementById('ovBottom');
+    const watchedTracks = new WeakSet();
+
+    const activeSubTrack = () => Array.from(video.textTracks || [])
+        .find((t) => t.mode === 'hidden' || t.mode === 'showing') || null;
+
+    const positionSubs = () => {
+        if (!subOverlay || !stage) return;
+        const w = stage.clientWidth;
+        const h = stage.clientHeight;
+        const vw = video.videoWidth || 16;
+        const vh = video.videoHeight || 9;
+        const picH = vh * Math.min(w / vw, h / vh);
+        const picGap = (h - picH) / 2;
+        const controlsUp = !stage.hasAttribute('data-hidden') && !stage.hasAttribute('data-locked');
+        const barH = controlsUp && ovBottom ? ovBottom.offsetHeight : 0;
+        subOverlay.style.bottom = `${Math.round(Math.max(picGap, barH) + picH * 0.04)}px`;
+        subOverlay.style.fontSize = `${Math.round(Math.max(13, Math.min(34, picH * 0.055)))}px`;
+    };
+
+    const renderCues = () => {
+        if (!subOverlay) return;
+        const track = activeSubTrack();
+        const cues = track?.activeCues ? Array.from(track.activeCues) : [];
+        subOverlay.replaceChildren(...cues.map((cue) => {
+            const line = document.createElement('div');
+            line.className = 'sub-line';
+            line.dir = 'auto';
+            if (typeof cue.getCueAsHTML === 'function') line.appendChild(cue.getCueAsHTML());
+            else line.textContent = cue.text || '';
+            return line;
+        }));
+        positionSubs();
+    };
+
+    const watchCues = (t) => {
+        if (watchedTracks.has(t)) return;
+        watchedTracks.add(t);
+        t.addEventListener('cuechange', renderCues);
+    };
+
+    video.addEventListener('loadedmetadata', positionSubs);
+    if (stage) {
+        new MutationObserver(positionSubs).observe(stage, {
+            attributes: true,
+            attributeFilter: ['data-hidden', 'data-expanded', 'data-locked'],
+        });
+        if (window.ResizeObserver) new ResizeObserver(positionSubs).observe(stage);
+    }
+
     const ensureSubtitleAdded = (track, index) => {
         const key = `${track.number}`;
         if (addedSubtitleTrackEls.has(key)) return addedSubtitleTrackEls.get(key);
@@ -606,10 +711,11 @@
 
     initTracks();
 
-    tracksBtn?.addEventListener('click', () => {
+    [tracksBtn, topTracksBtn].forEach((btn) => btn?.addEventListener('click', (e) => {
+        e.stopPropagation();
         renderTrackSheets();
         openSheet(tracksSheet);
-    });
+    }));
 
     // ═══════════════════════════════════════════
     // KEYBOARD SHORTCUTS
@@ -636,7 +742,8 @@
                 try { if (video) video.muted = !video.muted; } catch { /* ignore */ }
                 break;
             case 'Escape':
-                closeSheets();
+                if (allSheets.some((s) => !s.hasAttribute('hidden'))) closeSheets();
+                else if (stage?.hasAttribute('data-pseudo-fs')) setExpanded(false, false);
                 break;
         }
     });
