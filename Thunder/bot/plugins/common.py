@@ -14,6 +14,8 @@ from Thunder.bot import StreamBot
 from Thunder.utils.bot_utils import (about_keyboard, build_welcome, gen_dc_txt,
                                      get_user, help_keyboard, log_newusr,
                                      reply_user_err)
+from Thunder.utils import user_links
+from Thunder.utils.bot_i18n import tr
 from Thunder.utils.database import db
 from Thunder.utils.decorators import check_banned
 from Thunder.utils.file_properties import get_fname, get_fsize, parse_fid
@@ -21,14 +23,14 @@ from Thunder.utils.force_channel import force_channel_check, get_force_info
 from Thunder.utils.human_readable import humanbytes
 from Thunder.utils.logger import logger
 from Thunder.utils.messages import (
-    MSG_ABOUT, MSG_BUTTON_CLOSE,
+    MSG_BUTTON_CLOSE,
     MSG_BUTTON_GET_HELP, MSG_BUTTON_JOIN_CHANNEL,
     MSG_BUTTON_VIEW_PROFILE, MSG_DC_ANON_ERROR,
     MSG_DC_FILE_ERROR, MSG_DC_FILE_INFO, MSG_DC_INVALID_USAGE, MSG_DC_UNKNOWN,
     MSG_ERROR_USER_INFO, MSG_FILE_TYPE_ANIMATION, MSG_FILE_TYPE_AUDIO,
     MSG_FILE_TYPE_DOCUMENT, MSG_FILE_TYPE_PHOTO, MSG_FILE_TYPE_STICKER,
     MSG_FILE_TYPE_UNKNOWN, MSG_FILE_TYPE_VIDEO, MSG_FILE_TYPE_VIDEO_NOTE,
-    MSG_FILE_TYPE_VOICE, MSG_HELP, MSG_PING_RESPONSE, MSG_PING_START,
+    MSG_FILE_TYPE_VOICE, MSG_PING_RESPONSE, MSG_PING_START,
     MSG_TOKEN_ACTIVATED, MSG_TOKEN_FAILED, MSG_TOKEN_INVALID
 )
 from Thunder.vars import Var
@@ -96,7 +98,8 @@ async def start_command(bot: Client, msg: Message):
                     await asyncio.sleep(e.value)
                     return await msg.reply_text(text=MSG_TOKEN_INVALID, quote=True)
 
-    txt, markup = await build_welcome(bot, user.first_name if user else "Unknown")
+    lang = await user_links.lang_for(user)
+    txt, markup = await build_welcome(bot, user.first_name if user else "Unknown", lang)
     try:
         await msg.reply_text(text=txt, reply_markup=markup, quote=True)
     except FloodWait as e:
@@ -110,11 +113,12 @@ async def help_command(bot: Client, msg: Message):
     if msg.from_user:
         await log_newusr(bot, msg.from_user.id, msg.from_user.first_name)
 
-    txt = MSG_HELP.format(max_files=Var.MAX_BATCH_FILES)
+    lang = await user_links.lang_for(msg.from_user)
+    txt = tr(lang, "help", max=Var.MAX_BATCH_FILES)
     link, title = await get_force_info(bot)
     force = ([InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link, style=ButtonStyle.SUCCESS)]
              if link else None)
-    markup = help_keyboard(force)
+    markup = help_keyboard(force, lang)
     try:
         await msg.reply_text(text=txt, reply_markup=markup, quote=True)
     except FloodWait as e:
@@ -128,11 +132,12 @@ async def about_command(bot: Client, msg: Message):
     if msg.from_user:
         await log_newusr(bot, msg.from_user.id, msg.from_user.first_name)
 
+    lang = await user_links.lang_for(msg.from_user)
     try:
-        await msg.reply_text(text=MSG_ABOUT, reply_markup=about_keyboard(), quote=True)
+        await msg.reply_text(text=tr(lang, "about"), reply_markup=about_keyboard(lang), quote=True)
     except FloodWait as e:
         await asyncio.sleep(e.value)
-        await msg.reply_text(text=MSG_ABOUT, reply_markup=about_keyboard(), quote=True)
+        await msg.reply_text(text=tr(lang, "about"), reply_markup=about_keyboard(lang), quote=True)
 
 async def send_user_dc(msg: Message, user: User):
     txt = await gen_dc_txt(user)

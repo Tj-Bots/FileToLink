@@ -10,6 +10,7 @@ import datetime
 import secrets
 from typing import Any, Dict, Optional
 
+from Thunder.utils import bot_i18n
 from Thunder.utils.bot_utils import _build_links, quote_media_name
 from Thunder.utils.database import db
 from Thunder.utils.human_readable import humanbytes
@@ -22,8 +23,7 @@ TTL_CHOICES: Dict[str, Optional[int]] = {
     "30d": 30 * 24 * 3600,
     "forever": None,
 }
-STYLE_CHOICES = ("full", "compact")
-DEFAULT_SETTINGS: Dict[str, Any] = {"link_ttl": "forever", "style": "full", "history": True}
+DEFAULT_SETTINGS: Dict[str, Any] = {"link_ttl": "forever", "history": True, "lang": "auto"}
 # How long an expired or deleted link is still listed before MongoDB removes it.
 KEEP_EXPIRED = datetime.timedelta(days=14)
 CODE_BYTES = 8  # 11 url-safe characters
@@ -42,8 +42,8 @@ async def get_settings(user_id: int) -> Dict[str, Any]:
     settings = {**DEFAULT_SETTINGS, **{k: doc[k] for k in DEFAULT_SETTINGS if k in doc}}
     if settings["link_ttl"] not in TTL_CHOICES:
         settings["link_ttl"] = DEFAULT_SETTINGS["link_ttl"]
-    if settings["style"] not in STYLE_CHOICES:
-        settings["style"] = DEFAULT_SETTINGS["style"]
+    if settings["lang"] != "auto" and settings["lang"] not in bot_i18n.T:
+        settings["lang"] = "auto"
     settings["history"] = bool(settings["history"])
     return settings
 
@@ -105,8 +105,17 @@ async def personal_links(user_id: int, file_record: Dict[str, Any], shortener: b
         media_size=humanbytes(doc["file_size"]),
         shortener=shortener,
     )
-    links.update(code=doc["code"], expires_at=doc["expires_at"], style=settings["style"], personal=True)
+    links.update(code=doc["code"], expires_at=doc["expires_at"], ttl=settings["link_ttl"], personal=True)
     return links
+
+
+async def lang_for(user) -> str:
+    """The language to talk to this Telegram user in."""
+    if user is None:
+        return "en"
+    settings = await get_settings(user.id)
+    return bot_i18n.resolve_lang(None if settings["lang"] == "auto" else settings["lang"],
+                                 getattr(user, "language_code", None))
 
 
 def link_state(doc: Optional[Dict[str, Any]]) -> str:

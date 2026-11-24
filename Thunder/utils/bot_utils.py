@@ -14,32 +14,27 @@ from pyrogram.errors import FloodWait
 from pyrogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
                             Message, User)
 
+from Thunder.utils.bot_i18n import tr
 from Thunder.utils.database import db
 from Thunder.utils.file_properties import get_fname, get_fsize, get_hash
 from Thunder.utils.force_channel import get_force_info
 from Thunder.utils.human_readable import humanbytes
 from Thunder.utils.logger import logger
-from Thunder.utils.messages import (MSG_BUTTON_ABOUT, MSG_BUTTON_BACK,
-                                    MSG_BUTTON_CHANNEL, MSG_BUTTON_CLOSE,
-                                    MSG_BUTTON_GET_HELP, MSG_BUTTON_MY_LINKS,
-                                    MSG_BUTTON_SETTINGS,
-                                    MSG_BUTTON_JOIN_CHANNEL, MSG_DC_UNKNOWN,
-                                    MSG_DC_USER_INFO, MSG_NEW_USER,
-                                    MSG_WELCOME)
+from Thunder.utils.messages import (MSG_BUTTON_GET_HELP, MSG_BUTTON_JOIN_CHANNEL, MSG_DC_UNKNOWN,
+                                    MSG_DC_USER_INFO, MSG_NEW_USER)
 from Thunder.utils.shortener import shorten
 from Thunder.vars import Var
 
 
-async def build_welcome(bot: Client, user_name: str):
-    txt = MSG_WELCOME.format(user_name=user_name)
+async def build_welcome(bot: Client, user_name: str, lang: str = "en"):
+    txt = tr(lang, "start", name=user_name)
     link, title = await get_force_info(bot)
 
     btns = [
-        [InlineKeyboardButton(MSG_BUTTON_SETTINGS, callback_data="st", style=ButtonStyle.PRIMARY),
-         InlineKeyboardButton(MSG_BUTTON_MY_LINKS, callback_data="ml:p:0", style=ButtonStyle.PRIMARY)],
-        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command"),
-         InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command")],
-        [InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)]
+        [InlineKeyboardButton(tr(lang, "b_links"), callback_data="ml:p:0", style=ButtonStyle.PRIMARY),
+         InlineKeyboardButton(tr(lang, "b_settings"), callback_data="st", style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(tr(lang, "b_help"), callback_data="help_command"),
+         InlineKeyboardButton(tr(lang, "b_about"), callback_data="about_command")],
     ]
 
     if link:
@@ -51,27 +46,21 @@ async def build_welcome(bot: Client, user_name: str):
 UPDATES_CHANNEL_URL = "https://t.me/TJ_Bots"
 
 
-def help_keyboard(force_button=None) -> InlineKeyboardMarkup:
+def help_keyboard(force_button=None, lang: str = "en") -> InlineKeyboardMarkup:
     rows = [
-        [InlineKeyboardButton(MSG_BUTTON_SETTINGS, callback_data="st", style=ButtonStyle.PRIMARY),
-         InlineKeyboardButton(MSG_BUTTON_MY_LINKS, callback_data="ml:p:0", style=ButtonStyle.PRIMARY)],
-        [InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command")],
+        [InlineKeyboardButton(tr(lang, "b_links"), callback_data="ml:p:0", style=ButtonStyle.PRIMARY),
+         InlineKeyboardButton(tr(lang, "b_settings"), callback_data="st", style=ButtonStyle.PRIMARY)],
     ]
     if force_button:
         rows.append(force_button)
-    rows.append([
-        InlineKeyboardButton(MSG_BUTTON_BACK, callback_data="back_to_start"),
-        InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER),
-    ])
+    rows.append([InlineKeyboardButton(tr(lang, "b_back"), callback_data="back_to_start")])
     return InlineKeyboardMarkup(rows)
 
 
-def about_keyboard() -> InlineKeyboardMarkup:
+def about_keyboard(lang: str = "en") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command"),
-         InlineKeyboardButton(MSG_BUTTON_CHANNEL, url=UPDATES_CHANNEL_URL, style=ButtonStyle.SUCCESS)],
-        [InlineKeyboardButton(MSG_BUTTON_BACK, callback_data="back_to_start"),
-         InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)],
+        [InlineKeyboardButton(tr(lang, "b_channel"), url=UPDATES_CHANNEL_URL, style=ButtonStyle.SUCCESS)],
+        [InlineKeyboardButton(tr(lang, "b_back"), callback_data="back_to_start")],
     ])
 
 

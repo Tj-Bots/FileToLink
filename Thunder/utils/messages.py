@@ -147,14 +147,11 @@ MSG_BUTTON_GITHUB = "🛠️ GitHub"
 MSG_BUTTON_START_CHAT = "📩 Start Chat"
 MSG_BUTTON_CLOSE = "✖ Close"
 MSG_BUTTON_BACK = "🔙 Back"
-MSG_BUTTON_SETTINGS = "⚙️ Settings"
-MSG_BUTTON_MY_LINKS = "🗂 My Links"
-MSG_BUTTON_COPY_LINK = "📋 Copy link"
-MSG_BUTTON_CHANNEL = "📢 Updates channel"
 
 
 # COMMAND RESPONSES (User-facing)
 
+# Superseded by Thunder/utils/bot_i18n.py (per-user language); kept for reference.
 MSG_WELCOME = (
     "⚡ **Hey {user_name}, welcome to Thunder!**\n\n"
     "> Send me any file and I'll turn it into a **direct download link** "
@@ -240,12 +237,6 @@ MSG_LINKS = (
     "🚀 **Direct download**\n"
     "> {download_link}"
 )
-MSG_LINKS_COMPACT = (
-    "✅ `{file_name}`\n"
-    "💾 {file_size}  ·  ⏳ {validity}"
-)
-MSG_VALID_FOREVER = "never expires"
-MSG_VALID_UNTIL = "valid until {when} UTC"
 
 # USER NOTIFICATIONS
 
@@ -400,53 +391,3 @@ MSG_SYSTEM_STATS = (
 
 MSG_DB_STATS = "📊 **Database Statistics**\n\n> 👥 **Total Users:** `{total_users}`"
 
-
-# USER SETTINGS & MY LINKS
-
-MSG_SETTINGS = (
-    "⚙️ **Your settings**\n\n"
-    "⏳ **Link lifetime:** {ttl}\n"
-    "> How long the links you create from now on keep working.\n\n"
-    "🧾 **Message style:** {style}\n"
-    "> Full shows the links in the message. Compact keeps only the buttons.\n\n"
-    "🗂 **Save to My Links:** {history}\n"
-    "> Keep a list of your links so you can extend or delete them later."
-)
-MSG_TTL_NAMES = {"24h": "24 hours", "7d": "7 days", "30d": "30 days", "forever": "Forever"}
-MSG_STYLE_NAMES = {"full": "Full", "compact": "Compact"}
-MSG_ON = "On"
-MSG_OFF = "Off"
-MSG_SETTING_SAVED = "✅ Saved"
-
-MSG_MYLINKS_EMPTY = (
-    "🗂 **My Links**\n\n"
-    "> You have no saved links yet.\n"
-    "> Send me a file and it will show up here."
-)
-MSG_MYLINKS_HEADER = "🗂 **My Links** · {total} total · page {page}/{pages}\n\n"
-MSG_MYLINKS_ITEM = "**{n}.** `{name}`\n> 💾 {size}  ·  {status}\n\n"
-MSG_LINK_STATUS_FOREVER = "♾ forever"
-MSG_LINK_STATUS_LEFT = "⏳ {left} left"
-MSG_LINK_STATUS_EXPIRED = "⛔ expired"
-MSG_LINK_DETAILS = (
-    "🔗 **Link details**\n\n"
-    "📄 `{name}`\n"
-    "💾 {size}\n"
-    "📅 Created {created} UTC\n"
-    "{status}\n\n"
-    "{links}"
-)
-MSG_LINK_DETAILS_LINKS = "🎬 **Watch:** {watch}\n🚀 **Download:** {download}"
-MSG_LINK_DETAILS_DEAD = "> This link no longer works. Extend it to bring it back."
-MSG_LINK_DELETE_CONFIRM = "🗑 **Delete this link?**\n\n📄 `{name}`\n\n> Anyone who has it will lose access right away."
-MSG_LINK_DELETED = "🗑 Link deleted"
-MSG_LINK_EXTENDED = "⏳ Link extended"
-MSG_LINK_NOT_FOUND = "This link no longer exists."
-MSG_EXPIRED_CLEARED = "🧹 Removed {count} expired link(s)"
-MSG_BUTTON_EXTEND = "⏳ Extend:"
-MSG_BUTTON_HISTORY = "🗂 Save to My Links: {state}"
-MSG_BUTTON_DELETE = "🗑 Delete link"
-MSG_BUTTON_CONFIRM_DELETE = "🗑 Yes, delete"
-MSG_BUTTON_CANCEL = "Cancel"
-MSG_BUTTON_CLEAR_EXPIRED = "🧹 Clear expired"
-MSG_BUTTON_BACK_TO_LIST = "🔙 Back to list"
