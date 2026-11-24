@@ -39,10 +39,11 @@ async def build_welcome(bot: Client, user, lang: str = "en"):
     link, title = await get_force_info(bot)
 
     btns = [
-        [InlineKeyboardButton(tr(lang, "b_links"), callback_data="ml:p:0", style=ButtonStyle.PRIMARY),
-         InlineKeyboardButton(tr(lang, "b_settings"), callback_data="st", style=ButtonStyle.PRIMARY)],
         [InlineKeyboardButton(tr(lang, "b_help"), callback_data="help_command"),
          InlineKeyboardButton(tr(lang, "b_about"), callback_data="about_command")],
+        [InlineKeyboardButton(tr(lang, "b_links"), callback_data="ml:p:0", style=ButtonStyle.PRIMARY),
+         InlineKeyboardButton(tr(lang, "b_settings"), callback_data="st", style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(tr(lang, "b_channel"), url=UPDATES_CHANNEL_URL, style=ButtonStyle.SUCCESS)],
     ]
 
     if link:
@@ -56,19 +57,20 @@ UPDATES_CHANNEL_URL = "https://t.me/TJ_Bots"
 
 def help_keyboard(force_button=None, lang: str = "en") -> InlineKeyboardMarkup:
     rows = [
-        [InlineKeyboardButton(tr(lang, "b_links"), callback_data="ml:p:0", style=ButtonStyle.PRIMARY),
-         InlineKeyboardButton(tr(lang, "b_settings"), callback_data="st", style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(tr(lang, "b_back"), callback_data="back_to_start"),
+         InlineKeyboardButton(tr(lang, "b_about"), callback_data="about_command")],
     ]
     if force_button:
         rows.append(force_button)
-    rows.append([InlineKeyboardButton(tr(lang, "b_back"), callback_data="back_to_start")])
+    rows.append([InlineKeyboardButton(tr(lang, "b_channel"), url=UPDATES_CHANNEL_URL, style=ButtonStyle.SUCCESS)])
     return InlineKeyboardMarkup(rows)
 
 
 def about_keyboard(lang: str = "en") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton(tr(lang, "b_back"), callback_data="back_to_start"),
+         InlineKeyboardButton(tr(lang, "b_help"), callback_data="help_command")],
         [InlineKeyboardButton(tr(lang, "b_channel"), url=UPDATES_CHANNEL_URL, style=ButtonStyle.SUCCESS)],
-        [InlineKeyboardButton(tr(lang, "b_back"), callback_data="back_to_start")],
     ])
 
 

@@ -22,10 +22,11 @@ from Thunder.utils.decorators import (check_banned, get_shortener_status,
                                       require_token)
 from Thunder.utils.force_channel import force_channel_check
 from Thunder.utils import user_links
+from Thunder.utils.bot_i18n import tr
 from Thunder.utils.logger import logger
 from Thunder.utils.messages import (
-    MSG_BATCH_LINKS_READY, MSG_BUTTON_DOWNLOAD, MSG_BUTTON_START_CHAT,
-    MSG_BUTTON_STREAM_NOW, MSG_LINKS, MSG_PROCESSING_FILE,
+    MSG_BATCH_LINKS_READY, MSG_BUTTON_START_CHAT,
+    MSG_PROCESSING_FILE,
     MSG_CRITICAL_ERROR, MSG_DM_BATCH_PREFIX,
     MSG_DM_SINGLE_PREFIX, MSG_ERROR_DM_FAILED, MSG_ERROR_INVALID_NUMBER,
     MSG_ERROR_NO_FILE, MSG_ERROR_NOT_ADMIN, MSG_ERROR_NUMBER_RANGE,
@@ -63,19 +64,34 @@ async def fwd_media(m_msg: Message) -> Optional[Message]:
 
 
 def links_text(links: Dict[str, Any]) -> str:
-    return MSG_LINKS.format(
-        file_name=links['media_name'],
-        file_size=links['media_size'],
-        download_link=links['online_link'],
-        stream_link=links['stream_link']
+    ttl, expires_at = links.get('ttl'), links.get('expires_at')
+    if expires_at and ttl:
+        validity = tr('en', 'v_until', ttl=tr('en', f'ttl_{ttl}'), when=expires_at.strftime('%d.%m.%Y %H:%M'))
+    else:
+        validity = tr('en', 'v_forever')
+    return tr(
+        'en', 'ready',
+        name=str(links['media_name']).replace('`', "'"),
+        size=links['media_size'],
+        validity=validity,
+        download=links['online_link'],
+        watch=links['stream_link'],
     )
 
 
 def get_link_buttons(links, private: bool = False):
-    return InlineKeyboardMarkup([[
-        InlineKeyboardButton(MSG_BUTTON_STREAM_NOW, url=links['stream_link'], style=enums.ButtonStyle.SUCCESS),
-        InlineKeyboardButton(MSG_BUTTON_DOWNLOAD, url=links['online_link'], style=enums.ButtonStyle.SUCCESS)
-    ]])
+    rows = [[
+        InlineKeyboardButton(tr('en', 'b_watch'), url=links['stream_link'], style=enums.ButtonStyle.SUCCESS),
+        InlineKeyboardButton(tr('en', 'b_download'), url=links['online_link'], style=enums.ButtonStyle.SUCCESS),
+    ]]
+    # Revoking edits this message, so offer it only where nobody else reads it.
+    if private and links.get('code'):
+        rows.append([
+            InlineKeyboardButton(tr('en', 'b_copy'), copy_text=links['online_link']),
+            InlineKeyboardButton(tr('en', 'b_revoke'), callback_data=f"ml:d:{links['code']}:0",
+                                 style=enums.ButtonStyle.DANGER),
+        ])
+    return InlineKeyboardMarkup(rows)
 
 async def validate_request_common(client: Client, message: Message) -> Optional[bool]:
     if not await check_banned(client, message):

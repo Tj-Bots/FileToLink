@@ -17,7 +17,7 @@ from pyrogram.types import (CallbackQuery, InlineKeyboardButton,
 
 from Thunder.bot import StreamBot
 from Thunder.utils import user_links
-from Thunder.utils.bot_i18n import LANG_NAMES, T, tr
+from Thunder.utils.bot_i18n import tr
 from Thunder.utils.bot_utils import _build_links, log_newusr
 from Thunder.utils.database import db
 from Thunder.utils.decorators import check_banned
@@ -87,15 +87,14 @@ def _ttl_name(lang: str, key: str) -> str:
 # ------------------------------------------------------------------ settings
 
 def _settings_view(lang: str, s: dict):
-    lang_label = tr(lang, "auto") if s["lang"] == "auto" else LANG_NAMES.get(s["lang"], s["lang"])
-    text = tr(lang, "settings", ttl=_ttl_name(lang, s["link_ttl"]), language=lang_label,
-              hist=tr(lang, "on") if s["history"] else tr(lang, "off"))
+    hist = tr(lang, "on") if s["history"] else tr(lang, "off")
+    text = tr(lang, "settings", ttl=_ttl_name(lang, s["link_ttl"]), hist=hist)
     rows = [
-        [B(tr(lang, "s_ttl", v=_ttl_name(lang, s["link_ttl"])), callback_data="st:ttl")],
-        [B(tr(lang, "s_lang", v=lang_label), callback_data="st:lang")],
-        [B(tr(lang, "s_hist", v=tr(lang, "on") if s["history"] else tr(lang, "off")), callback_data="st:h")],
-        [B(tr(lang, "b_links"), callback_data="ml:p:0", style=ButtonStyle.PRIMARY)],
-        [B(tr(lang, "b_back"), callback_data="back_to_start")],
+        [B(tr(lang, "s_ttl"), callback_data="st:ttl", style=ButtonStyle.PRIMARY)],
+        [B(tr(lang, "s_hist", v=hist), callback_data="st:h",
+           style=ButtonStyle.SUCCESS if s["history"] else ButtonStyle.DANGER)],
+        [B(tr(lang, "b_back"), callback_data="back_to_start"),
+         B(tr(lang, "b_links"), callback_data="ml:p:0")],
     ]
     return text, InlineKeyboardMarkup(rows)
 
@@ -107,14 +106,6 @@ def _ttl_view(lang: str, s: dict):
     rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
     rows.append([B(tr(lang, "b_back"), callback_data="st")])
     return tr(lang, "ttl_title"), InlineKeyboardMarkup(rows)
-
-
-def _lang_view(lang: str, s: dict):
-    buttons = [B(_tick(name, s["lang"] == code), callback_data=f"st:l:{code}") for code, name in LANG_NAMES.items()]
-    rows = [[B(_tick(f"🔄 {tr(lang, 'auto')}", s["lang"] == "auto"), callback_data="st:l:auto")]]
-    rows += [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
-    rows.append([B(tr(lang, "b_back"), callback_data="st")])
-    return tr(lang, "lang_title"), InlineKeyboardMarkup(rows)
 
 
 @StreamBot.on_message(filters.command("settings") & filters.private)
@@ -135,13 +126,8 @@ async def settings_callback(client: Client, cq: CallbackQuery):
         toast = ""
         if parts[1:] == ["ttl"]:
             view = _ttl_view
-        elif parts[1:] == ["lang"]:
-            view = _lang_view
         elif len(parts) == 3 and parts[1] == "t" and parts[2] in user_links.TTL_CHOICES:
             await user_links.set_setting(user.id, "link_ttl", parts[2])
-            toast = "saved"
-        elif len(parts) == 3 and parts[1] == "l" and (parts[2] == "auto" or parts[2] in T):
-            await user_links.set_setting(user.id, "lang", parts[2])
             toast = "saved"
         elif parts[1:] == ["h"]:
             current = await user_links.get_settings(user.id)
