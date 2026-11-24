@@ -463,7 +463,7 @@
             if (n.parentNode !== host) host.appendChild(n);
         });
     };
-    const resetSheet = (s) => { s.style.transform = ''; s.style.removeProperty('--pull'); s.classList.remove('dragging'); };
+    const resetSheet = (s) => { s.style.transform = ''; s.style.opacity = ''; s.classList.remove('dragging'); };
     const closeSheets = () => {
         sheets.forEach((s) => { s.hidden = true; resetSheet(s); });
         ui.scrim.hidden = true;
@@ -490,10 +490,10 @@
             g.addEventListener('pointermove', (e) => {
                 if (startY == null) return;
                 const dy = Math.max(0, e.clientY - startY);
-                // The sheet tints as it is pulled down; the backdrop clears.
+                // The sheet fades as it is pulled down, and the backdrop clears with it.
                 const pull = Math.min(1, dy / Math.max(120, sheet.offsetHeight * 0.45));
                 sheet.style.transform = `translateY(${dy}px)`;
-                sheet.style.setProperty('--pull', pull.toFixed(3));
+                sheet.style.opacity = String(1 - pull * 0.85);
                 ui.scrim.style.opacity = String(1 - pull * 0.7);
             });
             const end = (e) => {
@@ -501,9 +501,16 @@
                 const dy = e.clientY - startY;
                 startY = null;
                 sheet.classList.remove('dragging');
-                if (dy > 70) { closeSheets(); return; }
+                if (dy > 70) {
+                    sheet.style.transition = 'transform .2s ease-in, opacity .2s ease-in';
+                    sheet.style.transform = 'translateY(100%)';
+                    sheet.style.opacity = '0';
+                    ui.scrim.style.opacity = '0';
+                    setTimeout(() => { sheet.style.transition = ''; closeSheets(); }, 200);
+                    return;
+                }
                 sheet.style.transform = '';
-                sheet.style.removeProperty('--pull');
+                sheet.style.opacity = '';
                 ui.scrim.style.opacity = '';
             };
             g.addEventListener('pointerup', end);
@@ -600,15 +607,22 @@
         return b;
     };
     const engine = () => el.player || null;
+    // What the viewer picked wins over what the engine reports: the engine
+    // switches asynchronously, and reading it back mid-switch shows the old track.
     let subTrackId = null;
+    let subPicked = false;
+    let audioPicked = null;
     const activeAudioId = () => {
+        if (audioPicked != null) return audioPicked;
         try { return engine()?.trackManager?.getActiveAudioTrack?.()?.id ?? null; } catch { return null; }
     };
     const renderTracks = () => {
         const p = engine();
         const audio = p?.getAudioTracks?.() || [];
         const subs = p?.getSubtitleTracks?.() || [];
-        try { subTrackId = p?.trackManager?.getActiveSubtitleTrack?.()?.id ?? subTrackId; } catch { /* ignore */ }
+        if (!subPicked) {
+            try { subTrackId = p?.trackManager?.getActiveSubtitleTrack?.()?.id ?? subTrackId; } catch { /* ignore */ }
+        }
 
         const subBox = $('subOptions');
         if (!subs.length) {
@@ -648,26 +662,35 @@
         }
     };
     const selectAudio = (id) => {
+        if (id === activeAudioId()) return;
+        audioPicked = id;
+        renderTracks();
         try { engine()?.selectAudioTrack(id); } catch { /* ignore */ }
-        setTimeout(renderTracks, 80);
     };
     const SUB_CHOICE_KEY = 'tj_sub_choice';
-    const selectSub = async (id) => {
+    let subRequest = 0;
+    const selectSub = async (id, auto = false) => {
+        if (!auto) subPicked = true;
+        if (id === subTrackId) return;
+        const mine = ++subRequest;
         subTrackId = id;
+        const tr = (engine()?.getSubtitleTracks?.() || []).find((s) => s.id === id);
+        if (!auto) store.set(SUB_CHOICE_KEY, tr ? (tr.language || 'any') : 'off');
         renderTracks();
         clearSubs();
         try { await engine()?.selectSubtitleTrack(id); } catch { /* ignore */ }
-        const tr = (engine()?.getSubtitleTracks?.() || []).find((s) => s.id === id);
-        store.set(SUB_CHOICE_KEY, tr ? (tr.language || 'any') : 'off');
+        // A later pick superseded this one while it was switching.
+        if (mine !== subRequest) return;
         renderTracks();
+        mirror();
     };
     // Re-apply the viewer's last subtitle language on a new file.
     const autoPickSub = () => {
         const want = store.get(SUB_CHOICE_KEY, null);
-        if (!want || want === 'off' || subTrackId != null) return;
+        if (subPicked || !want || want === 'off' || subTrackId != null) return;
         const subs = (engine()?.getSubtitleTracks?.() || []).filter((s) => s.subtitleType !== 'image');
         const match = subs.find((s) => s.language === want) || (want === 'any' ? subs[0] : null);
-        if (match) selectSub(match.id);
+        if (match) selectSub(match.id, true);
     };
 
     // ------------------------------------------------------------ subtitles

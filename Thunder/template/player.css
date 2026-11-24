@@ -21,6 +21,11 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
+/* No browser focus rings or tap flashes on mouse/touch; keyboard users keep a ring. */
+* { -webkit-tap-highlight-color: transparent; }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid rgba(147, 197, 253, .8); outline-offset: 2px; }
+.timeline:focus-visible, input[type="range"]:focus-visible { outline: none; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 body {
     margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
@@ -57,7 +62,7 @@ svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
 }
 .topbar-in { max-width: 1120px; margin: 0 auto; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: .2px; }
-.brand img { width: 34px; height: 34px; border-radius: 11px; box-shadow: 0 0 0 1px var(--line), 0 6px 20px rgba(59, 130, 246, .35); transition: transform .4s var(--ease); }
+.brand img { width: 34px; height: 34px; border-radius: 9px; box-shadow: 0 6px 20px rgba(79, 70, 229, .45); transition: transform .4s var(--ease); }
 .brand:hover img { transform: rotate(-8deg) scale(1.06); }
 .brand span { background: linear-gradient(90deg, #fff, #b9c8ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .lang-picker {
@@ -424,11 +429,6 @@ body.tj-fs .watch { animation: none; }
 .sheet.floating {
     position: fixed; z-index: 61; max-height: 80vh; min-height: 0; max-width: 680px; margin: 0 auto;
     padding-bottom: var(--safe-b);
-}
-.sheet::before {
-    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(180deg, rgba(96, 165, 250, .4), rgba(139, 92, 246, .14) 60%, transparent);
-    opacity: var(--pull, 0);
 }
 .sheet.dragging { transition: none; }
 .sheet.dragging .grab { background: var(--accent-2); width: 56px; box-shadow: 0 0 12px rgba(96, 165, 250, .8); }

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset=".55" stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <radialGradient id="shine" cx=".3" cy=".2" r=".8">
+      <stop offset="0" stop-color="#fff" stop-opacity=".35"/>
+      <stop offset=".6" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="txt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dbe4ff"/>
+    </linearGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#1e1b4b" flood-opacity=".55"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="120" fill="url(#shine)"/>
+  <g filter="url(#sh)" fill="url(#txt)">
+    <!-- T -->
+    <path d="M92 150h176v56h-60v176h-56V206H92z"/>
+    <!-- J -->
+    <path d="M300 150h120v164c0 52-34 84-88 84-30 0-56-10-74-30l34-42c10 12 22 18 38 18 20 0 34-12 34-34V206h-64z"/>
+  </g>
+  <!-- bolt -->
+  <path transform="translate(442 40) scale(.72) translate(-402 -60)" d="M402 60l-46 80h34l-20 62 58-92h-36l26-50z" fill="#facc15" stroke="#1e1b4b" stroke-width="6" stroke-linejoin="round"/>
+</svg>
