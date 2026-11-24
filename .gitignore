@@ -2,12 +2,18 @@
 *$py.class
 *.so
 .venv/
+venv/
 .Python
-config.env
+# Exclude env files (a stray `git add -A` must not pick them up); track only the template.
+*.env
+!config_sample.env
+# Local operational files containing credentials or scratch notes.
+VPS.md
+PLAN.md
 log.text
-Thunder/logs/
 .vscode/
 **/__pycache__/
+Thunder/logs/
 *.session
 *.session-journal
 *.session-shm
@@ -27,3 +33,10 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+.coverage.json
+__pycache__/
+*.pyc

@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Dependencies float on purpose, so a weekly run is the only thing that
+    # notices a bad upstream release before a user does.
+    - cron: "30 4 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Only PR runs race. Cancelling a publish to Docker Hub midway is worse than
+  # letting it finish.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    # Runs on the upstream repository, not in every fork.
+    if: github.repository == 'fyaz05/FileToLink'
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows earns its place: the uvloop marker and update.py's chmod
+        # fallback never execute on Linux.
+        os: [ubuntu-latest, windows-latest]
+        # Must match .python-version and the Dockerfile's minor;
+        # tests/test_ci_workflow.py asserts that.
+        python-version: ["3.13"]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        # PyYAML has no cp315 wheel; without this it builds its C extension,
+        # which needs MSVC on Windows.
+        env:
+          PYYAML_FORCE_LIBYAML: "0"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip check
+      - name: Test
+        run: python -m pytest -q
+      - name: Lint
+        run: python -m ruff check .
+
+  build:
+    # Waiting for the tests is what stops a red main from publishing.
+    needs: [test]
+    if: github.repository == 'fyaz05/FileToLink'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Set up Buildx
+        # The default docker driver writes to the daemon's image store, and the
+        # classic store cannot hold an image index, so an explicit provenance
+        # attestation fails there. A container-driver builder supports them
+        # regardless, and also keeps the result addressable for the smoke test.
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
+      - name: Log in to Docker Hub
+        # Fork pull requests never receive secrets, so logging in there would
+        # only fail. The image still builds without credentials.
+        if: github.event_name == 'push'
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550  # v4.8.0
+        with:
+          username: fyaz05
+          password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
+        with:
+          context: .
+          # Loaded, not pushed, and without attestations: this build exists to be
+          # tested, and the publish step below rebuilds from the same cache. An
+          # attestation cannot be loaded into the daemon's image store, so asking
+          # for one here would fail before the test ever ran. Passing no tag keeps
+          # this image out of the registry entirely.
+          load: true
+          tags: fyaz05/thunder:test
+      - name: Smoke test the built image
+        # Building is not the same as working: a missing dependency or a broken
+        # import still produces a valid image that fails the moment it starts.
+        # This runs BEFORE anything is published, so a broken image is never the
+        # one tagged latest. Importing the entry point is the strongest check that
+        # needs no real credentials -- Thunder.vars validates its configuration at
+        # import, so placeholders stand in for a deployment's own values. That
+        # also means this proves the dependencies and the code, not the config.
+        run: |
+          docker run --rm \
+            -e API_ID=123456 \
+            -e API_HASH=00000000000000000000000000000000 \
+            -e BOT_TOKEN=123456:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \
+            -e BIN_CHANNEL=-1001234567890 \
+            -e OWNER_ID=1 \
+            -e DATABASE_URL=mongodb://localhost:27017/smoke \
+            fyaz05/thunder:test python -c \
+            "import Thunder, Thunder.__main__, uvloop, warpcrypto, aiohttp; print('ok', Thunder.__version__)"
+      - name: Publish
+        # Only reached once the smoke test passed, and only for a push event: a
+        # pull request never receives secrets. Rebuilds from the cache the tested
+        # build populated, so this is the same image, now with attestations.
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
+        with:
+          context: .
+          # Public and private repositories default differently, so it is set
+          # explicitly.
+          provenance: mode=max
+          push: true
+          tags: fyaz05/thunder:latest

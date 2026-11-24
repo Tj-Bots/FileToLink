@@ -1,4 +1,8 @@
-# Thunder/utils/bot_utils.py
+"""Link generation and the small bot actions the plugins share.
+
+Builds canonical and shortened links, checks channel membership, and sends the
+notifications that go to the owner or the log channel.
+"""
 
 import asyncio
 from typing import Any, Dict, Optional
@@ -91,16 +95,6 @@ async def gen_canonical_links(
         shortener=shortener
     )
 
-
-
-async def notify_ch(cli: Client, txt: str):
-    if not (hasattr(Var, 'BIN_CHANNEL') and isinstance(Var.BIN_CHANNEL, int) and Var.BIN_CHANNEL != 0):
-        return
-    try:
-        await cli.send_message(chat_id=Var.BIN_CHANNEL, text=txt)
-    except FloodWait as e:
-        await asyncio.sleep(e.value)
-        await cli.send_message(chat_id=Var.BIN_CHANNEL, text=txt)
 
 
 async def notify_own(cli: Client, txt: str):

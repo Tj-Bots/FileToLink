@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.13%2B-blue?style=for-the-badge&logo=python" alt="Python Version"></a>
-  <a href="https://github.com/Mayuri-Chan/pyrofork"><img src="https://img.shields.io/badge/Pyrofork-red?style=for-the-badge" alt="Pyrofork"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.15-blue?style=for-the-badge&logo=python" alt="Python Version"></a>
+  <a href="https://github.com/rjriajul/wzgram"><img src="https://img.shields.io/badge/wzgram-red?style=for-the-badge" alt="wzgram"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/fyaz05/FileToLink?style=for-the-badge&color=green" alt="License"></a>
   <a href="https://t.me/Thunder_Updates"><img src="https://img.shields.io/badge/Telegram-Channel-blue?style=for-the-badge&logo=telegram" alt="Telegram Channel"></a>
 </p>
@@ -134,9 +134,9 @@ Copy `config_sample.env` to `config.env` and fill in your values.
 | `MAX_BATCH_FILES` | Maximum files in batch processing | `50` |
 | `CHANNEL` | Allow processing messages from channels | `False` |
 | `BANNED_CHANNELS` | Blocked channel IDs | *(empty)* |
-| `SLEEP_THRESHOLD` | Client switch threshold | `300` |
+| `SLEEP_THRESHOLD` | Flood-wait threshold in seconds | `600` |
 | `WORKERS` | Async workers | `8` |
-| `NAME` | Bot name | `ThunderF2L` |
+| `NAME` | Bot name; also the MongoDB database name (unsafe chars become `_`) | `ThunderF2L` |
 | `BIND_ADDRESS` | Bind address | `0.0.0.0` |
 | `PING_INTERVAL` | Ping interval (seconds) | `840` |
 | `TOKEN_ENABLED` | Enable tokens | `False` |
@@ -285,7 +285,7 @@ This section covers the complete setup process for deploying Thunder, from prere
 
 | Requirement | Description | Source |
 | :--- | :--- | :--- |
-| Python 3.13 | Programming language | [python.org](https://python.org) |
+| Python 3.15 | Programming language | [python.org](https://python.org) |
 | MongoDB | Database | [mongodb.com](https://mongodb.com) |
 | Telegram API | API credentials | [my.telegram.org](https://my.telegram.org/apps) |
 | Bot Token | From @BotFather | [@BotFather](https://t.me/BotFather) |
@@ -305,10 +305,51 @@ cd FileToLink
 cp config_sample.env config.env
 nano config.env  # Edit your settings
 
-# 3. Build and run
+# 3. Build and run (the config is mounted — it is not baked into the image)
 docker build -t thunder .
-docker run -d --name thunder -p 8080:8080 thunder
+docker run -d --name thunder -p 8080:8080 \
+  -v "$PWD/config.env:/app/config.env:ro" thunder
 ```
+
+(PowerShell: `-v "${PWD}\config.env:/app/config.env:ro"`.)
+
+The container runs as uid `10001`, which is not you, so `config.env` must be
+readable by others. A file created with a normal umask (`cp` gives `644`) already
+is; if yours is `600`, widen it without changing ownership:
+
+```bash
+chmod 644 config.env
+```
+
+`--stop-timeout 30` is optional — it lets the server's 25s shutdown drain
+finish, since `docker stop` defaults to 10s:
+
+```bash
+docker run -d --stop-timeout 30 --name thunder -p 8080:8080 \
+  -v "$PWD/config.env:/app/config.env:ro" thunder
+```
+
+The image runs as unprivileged user `10001` without a build toolchain. Env files are
+excluded from the build context (`.dockerignore`), so `config.env` is not baked in and
+must be supplied at runtime.
+
+<details>
+<summary>Alternative: pass configuration as environment variables</summary>
+
+Docker's `--env-file` passes values verbatim, so inline comments and quotes in
+`config_sample.env` (`HAS_SSL="True" # ...`) corrupt variables. Generate a clean file
+using `python-dotenv`:
+
+```bash
+python3 -c "from dotenv import dotenv_values as d; [print(f'{k}={v}') for k, v in d('config.env').items()]" > /tmp/thunder-docker.env
+docker run -d --name thunder -p 8080:8080 --env-file /tmp/thunder-docker.env thunder
+```
+
+Requires `python-dotenv` locally (`pip install python-dotenv`); mounting `config.env`
+avoids this step. Keep the generated file outside the repository so it cannot enter the
+build context.
+
+</details>
 
 <details>
 <summary>Manual Installation</summary>
@@ -384,12 +425,18 @@ After deployment, to add any additional environment variables, use the Koyeb das
    ```bash
    heroku ps:scale web=1
    ```
-7. Set `UPSTREAM_REPO` for auto-updates on dyno restart:
+7. Restarts update from `UPSTREAM_REPO` only when the deployment has a git checkout. A Heroku slug is built from a tarball (step 5) and carries no `.git`, so the update is skipped and the dyno starts on the code in the slug. Durable changes need a new slug:
    ```bash
+   # Only takes effect on a deployment that has a .git directory (e.g. a VM checkout).
    heroku config:set UPSTREAM_REPO="https://github.com/fyaz05/FileToLink" UPSTREAM_BRANCH="main"
    ```
 
 > **Note:** Heroku provides HTTPS automatically. Set `FQDN` to `your-app-name.herokuapp.com` and `HAS_SSL` to `True`.
+
+> **Note:** `heroku.yml` builds this repo's `Dockerfile`, so the dyno runs as uid `10001`
+> and cannot read a root-only `config.env`. Config vars avoid the file entirely, which is
+> why this path uses them; the container's own `Thunder/logs` is already writable from the
+> image, so no `chmod` step is needed here.
 
 > **Note:** See the [Configuration](#configuration) section for required environment variables.
 
@@ -456,7 +503,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # Settings for file streaming
         proxy_buffering off;
         proxy_request_buffering off;
@@ -529,6 +576,11 @@ A: Your browser likely doesn't support the file's audio or video format (codec).
 **Q: Why does the bot sometimes become unresponsive?**
 A: This is likely a **Telegram Flood Wait**. To prevent spam, Telegram temporarily limits accounts that make too many requests. The bot is designed to handle this automatically by pausing and will resume on its own once the limit is lifted.
 
+**Q: On shutdown I see `Task was destroyed but it is pending!` — is something broken?**
+A: No, if `✓ Database connection closed` was printed first. The library leaves its media
+sessions open on teardown; the bot still exits cleanly. Expect six after a download, none if
+nothing was streamed.
+
 #### **Performance**
 
 **Q: How can I fix slow download and streaming speeds?**
@@ -554,9 +606,23 @@ Contributions are welcome! Please follow these steps:
 
 1. Fork the repository.
 2. Create a new feature branch (`git checkout -b feature/amazing-feature`).
-3. Commit your changes (`git commit -m 'Add some amazing feature'`).
-4. Push to the branch (`git push origin feature/amazing-feature`).
-5. Open a Pull Request.
+3. Make your change and run the suite and linter:
+   ```bash
+   PYYAML_FORCE_LIBYAML=0 pip install -r requirements-dev.txt   # POSIX
+   python -m pytest -q
+   python -m ruff check .
+   ```
+   The env var is needed on Python 3.15 (no `cp315` wheel). On Windows, where that
+   assignment is not valid, set it first:
+   ```powershell
+   $env:PYYAML_FORCE_LIBYAML = "0"; pip install -r requirements-dev.txt
+   ```
+4. Commit your changes (`git commit -m 'Add some amazing feature'`).
+5. Push to the branch (`git push origin feature/amazing-feature`).
+6. Open a Pull Request.
+
+CI runs the suite on Linux and Windows, then builds the image only once those
+pass.
 
 ## License
 
@@ -564,10 +630,10 @@ Licensed under the [Apache License 2.0](LICENSE). See the `LICENSE` file for det
 
 ## Acknowledgments
 
-- [Pyrofork](https://github.com/Mayuri-Chan/pyrofork) - Telegram MTProto API Framework
+- [wzgram](https://github.com/rjriajul/wzgram) - Telegram MTProto API Framework
 - [aiohttp](https://github.com/aio-libs/aiohttp) - Asynchronous HTTP Client/Server
 - [PyMongo](https://github.com/mongodb/mongo-python-driver) - Asynchronous MongoDB Driver
-- [TgCrypto](https://github.com/pyrogram/tgcrypto) - High-performance cryptography library
+- [WarpCrypto](https://github.com/rjriajul/warpcrypto) - High-performance cryptography library (Rust)
 
 ## ⚠️ Disclaimer
 

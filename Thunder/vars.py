@@ -1,4 +1,8 @@
-# Thunder/vars.py
+"""Environment configuration, validated at import.
+
+A missing requirement stops startup here rather than failing later, so any
+import of this module implies usable settings.
+"""
 
 import os
 
@@ -34,6 +38,13 @@ class Var:
         raise ValueError("Missing required Telegram API configuration")
 
     NAME: str = os.getenv("NAME", "ThunderF2L")
+
+    # NAME permits characters MongoDB rejects in a database name (pymongo InvalidName).
+    DATABASE_NAME: str = "".join(
+        char if char.isalnum() or char in "-_" else "_"
+        for char in NAME.strip()
+    ) or "Thunder"
+
     SLEEP_THRESHOLD: int = int(os.getenv("SLEEP_THRESHOLD", "600"))
     WORKERS: int = int(os.getenv("WORKERS", "8"))
 

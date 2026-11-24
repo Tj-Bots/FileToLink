@@ -205,6 +205,16 @@
     // <track> children didn't survive its internal
     // re-renders reliably, so it's cut out entirely.)
     // ═══════════════════════════════════════════
+    pageCopyBtn?.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            toast(t('linkCopied'));
+        } catch {
+            toast(t('copyFailed'));
+        }
+    });
+
+    // Image and non-media pages have no player; everything below is the player.
     if (!player) return;
 
     let duration = 0;
@@ -276,7 +286,7 @@
         setHidden(bgMessage, false);
     });
 
-    video.src = VIDEO_SRC;
+    if (!video.getAttribute('src')) video.src = VIDEO_SRC;
     setPlayButtonState();
     updateTimeDisplay();
 
@@ -766,14 +776,6 @@
     openInBtn?.addEventListener('click', () => openSheet(openInSheet));
     pageOpenInBtn?.addEventListener('click', () => openSheet(openInSheet));
 
-    pageCopyBtn?.addEventListener('click', async () => {
-        try {
-            await navigator.clipboard.writeText(window.location.href);
-            toast(t('linkCopied'));
-        } catch {
-            toast(t('copyFailed'));
-        }
-    });
 
     // ═══════════════════════════════════════════
     // SUBTITLES

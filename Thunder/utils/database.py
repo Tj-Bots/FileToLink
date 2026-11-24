@@ -1,5 +1,10 @@
-# Thunder/utils/database.py
+"""MongoDB access layer for users, tokens, bans and file records.
 
+Owns the collections, their unique indexes, and the duplicate-user recovery
+that runs when an existing database predates the unique index on `id`.
+"""
+
+import asyncio
 import datetime
 from typing import Any, Dict, Optional
 from pymongo import AsyncMongoClient
@@ -10,6 +15,8 @@ from Thunder.utils.logger import logger
 
 class Database:
     def __init__(self, uri: str, database_name: str, *args, **kwargs):
+        kwargs.setdefault("serverSelectionTimeoutMS", 10000)
+        kwargs.setdefault("connectTimeoutMS", 20000)
         self._client = AsyncMongoClient(uri, *args, **kwargs)
         self.db = self._client[database_name]
         self.col: AsyncCollection = self.db.users
@@ -28,7 +35,7 @@ class Database:
             {"$project": {"_id": "$doc_id"}}
         ]
         keep_ids = []
-        async for doc in self.col.aggregate(pipeline):
+        async for doc in await self.col.aggregate(pipeline):
             keep_ids.append(doc["_id"])
         if keep_ids:
             result = await self.col.delete_many({"_id": {"$nin": keep_ids}})
@@ -447,7 +454,19 @@ class Database:
             raise
 
     async def close(self):
-        if self._client:
-            await self._client.close()
+        if not self._client:
+            return
+        await self._client.close()
+        # pymongo can leave its cursor task pending; drain it, bounded.
+        current = asyncio.current_task()
+        pending = [
+            task for task in asyncio.all_tasks()
+            if task is not current and not task.done()
+            and "pymongo" in task.get_name()
+        ]
+        for task in pending:
+            task.cancel()
+        if pending:
+            await asyncio.wait(pending, timeout=2)
 
-db = Database(Var.DATABASE_URL, Var.NAME)
+db = Database(Var.DATABASE_URL, Var.DATABASE_NAME)

@@ -24,6 +24,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'Image-based subtitles (PGS/VobSub) can only be shown by an external player.',
             audioNoSwitch: "The browser can't switch audio tracks. Use Open In for an external player.",
             track: 'Track {n}', loading: 'Loading…', language: 'Language',
+            nothingToPlay: 'isn\'t a media file, so there is nothing to play.',
         },
         he: {
             _name: 'עברית',
@@ -45,6 +46,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'כתוביות מסוג תמונה (PGS/VobSub) מוצגות רק בנגן חיצוני.',
             audioNoSwitch: 'הדפדפן לא יכול להחליף ערוץ שמע. אפשר לבחור שמע בנגן חיצוני.',
             track: 'ערוץ {n}', loading: 'טוען…', language: 'שפה',
+            nothingToPlay: 'אינו קובץ מדיה, אז אין כאן מה לנגן.',
         },
         ar: {
             _name: 'العربية',
@@ -66,6 +68,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'الترجمات المصورة (PGS/VobSub) تُعرض فقط في مشغل خارجي.',
             audioNoSwitch: 'لا يمكن للمتصفح تبديل مسار الصوت. استخدم مشغلًا خارجيًا.',
             track: 'مسار {n}', loading: 'جارٍ التحميل…', language: 'اللغة',
+            nothingToPlay: 'ليس ملف وسائط، لذا لا يوجد ما يمكن تشغيله.',
         },
         fa: {
             _name: 'فارسی',
@@ -87,6 +90,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'زیرنویس‌های تصویری (PGS/VobSub) فقط در پخش‌کننده خارجی نمایش داده می‌شوند.',
             audioNoSwitch: 'مرورگر نمی‌تواند ترک صوتی را عوض کند. از پخش‌کننده خارجی استفاده کنید.',
             track: 'ترک {n}', loading: 'در حال بارگذاری…', language: 'زبان',
+            nothingToPlay: 'فایل رسانه‌ای نیست، پس چیزی برای پخش وجود ندارد.',
         },
         ru: {
             _name: 'Русский',
@@ -108,6 +112,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'Графические субтитры (PGS/VobSub) показываются только во внешнем плеере.',
             audioNoSwitch: 'Браузер не может переключать аудиодорожки. Используйте внешний плеер.',
             track: 'Дорожка {n}', loading: 'Загрузка…', language: 'Язык',
+            nothingToPlay: '— не медиафайл, воспроизводить нечего.',
         },
         uk: {
             _name: 'Українська',
@@ -129,6 +134,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'Графічні субтитри (PGS/VobSub) показуються лише у зовнішньому плеєрі.',
             audioNoSwitch: 'Браузер не може перемикати аудіодоріжки. Скористайтеся зовнішнім плеєром.',
             track: 'Доріжка {n}', loading: 'Завантаження…', language: 'Мова',
+            nothingToPlay: '— не медіафайл, відтворювати нічого.',
         },
         es: {
             _name: 'Español',
@@ -150,6 +156,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'Los subtítulos de imagen (PGS/VobSub) solo se muestran en un reproductor externo.',
             audioNoSwitch: 'El navegador no puede cambiar la pista de audio. Usa un reproductor externo.',
             track: 'Pista {n}', loading: 'Cargando…', language: 'Idioma',
+            nothingToPlay: 'no es un archivo multimedia, así que no hay nada que reproducir.',
         },
         pt: {
             _name: 'Português',
@@ -171,6 +178,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'Legendas em imagem (PGS/VobSub) só aparecem em um player externo.',
             audioNoSwitch: 'O navegador não troca a faixa de áudio. Use um player externo.',
             track: 'Faixa {n}', loading: 'Carregando…', language: 'Idioma',
+            nothingToPlay: 'não é um arquivo de mídia, então não há nada para reproduzir.',
         },
         fr: {
             _name: 'Français',
@@ -192,6 +200,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'Les sous-titres en image (PGS/VobSub) ne s’affichent que dans un lecteur externe.',
             audioNoSwitch: 'Le navigateur ne peut pas changer de piste audio. Utilisez un lecteur externe.',
             track: 'Piste {n}', loading: 'Chargement…', language: 'Langue',
+            nothingToPlay: 'n’est pas un fichier multimédia, il n’y a donc rien à lire.',
         },
         de: {
             _name: 'Deutsch',
@@ -213,6 +222,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'Bild-Untertitel (PGS/VobSub) werden nur in einem externen Player angezeigt.',
             audioNoSwitch: 'Der Browser kann die Audiospur nicht wechseln. Verwende einen externen Player.',
             track: 'Spur {n}', loading: 'Wird geladen…', language: 'Sprache',
+            nothingToPlay: 'ist keine Mediendatei, daher gibt es nichts abzuspielen.',
         },
         it: {
             _name: 'Italiano',
@@ -234,6 +244,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'I sottotitoli a immagine (PGS/VobSub) si vedono solo in un lettore esterno.',
             audioNoSwitch: 'Il browser non può cambiare traccia audio. Usa un lettore esterno.',
             track: 'Traccia {n}', loading: 'Caricamento…', language: 'Lingua',
+            nothingToPlay: 'non è un file multimediale, quindi non c’è nulla da riprodurre.',
         },
         tr: {
             _name: 'Türkçe',
@@ -255,6 +266,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'Görüntü tabanlı altyazılar (PGS/VobSub) yalnızca harici oynatıcıda gösterilir.',
             audioNoSwitch: 'Tarayıcı ses parçasını değiştiremez. Harici oynatıcı kullanın.',
             track: 'Parça {n}', loading: 'Yükleniyor…', language: 'Dil',
+            nothingToPlay: 'bir medya dosyası değil, oynatılacak bir şey yok.',
         },
         id: {
             _name: 'Bahasa Indonesia',
@@ -276,6 +288,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'Subtitle berbasis gambar (PGS/VobSub) hanya tampil di pemutar eksternal.',
             audioNoSwitch: 'Browser tidak dapat mengganti trek audio. Gunakan pemutar eksternal.',
             track: 'Trek {n}', loading: 'Memuat…', language: 'Bahasa',
+            nothingToPlay: 'bukan file media, jadi tidak ada yang bisa diputar.',
         },
         hi: {
             _name: 'हिन्दी',
@@ -297,6 +310,7 @@ window.__TJ_I18N__ = {
             imageSubs: 'इमेज सबटाइटल (PGS/VobSub) केवल बाहरी प्लेयर में दिखते हैं।',
             audioNoSwitch: 'ब्राउज़र ऑडियो ट्रैक नहीं बदल सकता। बाहरी प्लेयर का उपयोग करें।',
             track: 'ट्रैक {n}', loading: 'लोड हो रहा है…', language: 'भाषा',
+            nothingToPlay: 'मीडिया फ़ाइल नहीं है, इसलिए चलाने के लिए कुछ नहीं है।',
         },
         zh: {
             _name: '中文',
@@ -318,6 +332,7 @@ window.__TJ_I18N__ = {
             imageSubs: '图像字幕（PGS/VobSub）只能在外部播放器中显示。',
             audioNoSwitch: '浏览器无法切换音轨，请使用外部播放器。',
             track: '轨道 {n}', loading: '加载中…', language: '语言',
+            nothingToPlay: '不是媒体文件，没有可播放的内容。',
         },
         ja: {
             _name: '日本語',
@@ -339,6 +354,7 @@ window.__TJ_I18N__ = {
             imageSubs: '画像字幕（PGS/VobSub）は外部プレーヤーでのみ表示できます。',
             audioNoSwitch: 'ブラウザでは音声トラックを切り替えられません。外部プレーヤーを使用してください。',
             track: 'トラック {n}', loading: '読み込み中…', language: '言語',
+            nothingToPlay: 'はメディアファイルではないため、再生するものはありません。',
         },
         ko: {
             _name: '한국어',
@@ -360,6 +376,7 @@ window.__TJ_I18N__ = {
             imageSubs: '이미지 자막(PGS/VobSub)은 외부 플레이어에서만 표시됩니다.',
             audioNoSwitch: '브라우저에서는 오디오 트랙을 바꿀 수 없습니다. 외부 플레이어를 사용하세요.',
             track: '트랙 {n}', loading: '불러오는 중…', language: '언어',
+            nothingToPlay: '은(는) 미디어 파일이 아니라서 재생할 것이 없습니다.',
         },
     },
 };

@@ -1,9 +1,15 @@
-# Thunder/server/stream_routes.py
+"""HTTP surface: direct downloads, streaming, and the player page.
+
+Serves /f/<hash>/<name> and the short-hash form, honouring Range requests so
+large files seek, plus the /watch pages that wrap a file in a player.
+"""
 
 import asyncio
+import gzip
 import re
 import secrets
 import time
+from pathlib import Path
 from urllib.parse import quote, unquote
 
 from aiohttp import web
@@ -40,7 +46,6 @@ OVERLOAD_RETRY_AFTER_SECONDS = 2
 RANGE_REGEX = re.compile(r"^bytes=(?P<start>\d*)-(?P<end>\d*)$")
 PATTERN_HASH_FIRST = re.compile(
     rf"^([a-zA-Z0-9_-]{{{SECURE_HASH_LENGTH}}})(\d+)(?:/.*)?$")
-PATTERN_ID_FIRST = re.compile(r"^(\d+)(?:/.*)?$")
 VALID_HASH_REGEX = re.compile(r'^[a-zA-Z0-9_-]+$')
 VALID_PUBLIC_HASH_REGEX = re.compile(rf'^[0-9a-f]{{{PUBLIC_HASH_LENGTH}}}$')
 VALID_DISPOSITIONS = {"inline", "attachment"}
@@ -53,6 +58,8 @@ CORS_HEADERS = {
 }
 
 streamers = {}
+
+HEADERS_SENT_KEY = web.RequestKey("thunder_media_headers_sent", bool)
 
 # Per-process caches so a file's Matroska index is read once, and each
 # minute of a subtitle track is extracted once, not once per viewer.
@@ -79,19 +86,6 @@ def parse_media_request(path: str, query: dict) -> tuple[int, str]:
             if (len(secure_hash) == SECURE_HASH_LENGTH and
                     VALID_HASH_REGEX.match(secure_hash)):
                 return message_id, secure_hash
-        except ValueError as e:
-            raise InvalidHash(f"Invalid message ID format in path: {e}") from e
-
-    match = PATTERN_ID_FIRST.match(clean_path)
-    if match:
-        try:
-            message_id = int(match.group(1))
-            secure_hash = query.get("hash", "").strip()
-            if (len(secure_hash) == SECURE_HASH_LENGTH and
-                    VALID_HASH_REGEX.match(secure_hash)):
-                return message_id, secure_hash
-            else:
-                raise InvalidHash("Invalid or missing hash in query parameter")
         except ValueError as e:
             raise InvalidHash(f"Invalid message ID format in path: {e}") from e
 
@@ -194,7 +188,6 @@ async def _serve_media_response(
     *,
     file_info: dict,
     streamer: ByteStreamer,
-    client_id: int,
     media_ref: int | str,
     fallback_message_id: int | None = None,
     on_fallback_message=None
@@ -232,50 +225,129 @@ async def _serve_media_response(
     if range_header:
         headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
 
-    if request.method == 'HEAD':
-        work_loads[client_id] -= 1
-        return web.Response(
-            status=206 if range_header else 200,
-            headers=headers
-        )
-
-    async def stream_generator():
-        try:
-            bytes_sent = 0
-            bytes_to_skip = start % CHUNK_SIZE
-
-            async for chunk in streamer.stream_file(
-                media_ref,
-                offset=start,
-                limit=content_length,
-                fallback_message_id=fallback_message_id,
-                on_fallback_message=on_fallback_message
-            ):
-                if bytes_to_skip > 0:
-                    if len(chunk) <= bytes_to_skip:
-                        bytes_to_skip -= len(chunk)
-                        continue
-                    chunk = chunk[bytes_to_skip:]
-                    bytes_to_skip = 0
-
-                remaining = content_length - bytes_sent
-                if len(chunk) > remaining:
-                    chunk = chunk[:remaining]
-
-                if chunk:
-                    yield chunk
-                    bytes_sent += len(chunk)
-
-                if bytes_sent >= content_length:
-                    break
-        finally:
-            work_loads[client_id] -= 1
-
-    return web.Response(
+    response = web.StreamResponse(
         status=206 if range_header else 200,
-        body=stream_generator(),
-        headers=headers
+        headers=headers,
     )
+    await response.prepare(request)
+    # Once the response is prepared, an HTTPException wedges the connection rather than aborting it.
+    request[HEADERS_SENT_KEY] = True
+
+    if request.method == 'HEAD':
+        await response.write_eof()
+        return response
+
+    bytes_sent = 0
+    bytes_to_skip = start % CHUNK_SIZE
+
+    async for chunk in streamer.stream_file(
+        media_ref,
+        offset=start,
+        limit=content_length,
+        fallback_message_id=fallback_message_id,
+        on_fallback_message=on_fallback_message
+    ):
+        if bytes_to_skip > 0:
+            if len(chunk) <= bytes_to_skip:
+                bytes_to_skip -= len(chunk)
+                continue
+            chunk = chunk[bytes_to_skip:]
+            bytes_to_skip = 0
+
+        remaining = content_length - bytes_sent
+        if len(chunk) > remaining:
+            chunk = chunk[:remaining]
+
+        if chunk:
+            await response.write(chunk)
+            bytes_sent += len(chunk)
+
+        if bytes_sent >= content_length:
+            break
+
+    if bytes_sent < content_length:
+        logger.warning(
+            f"Short transfer: sent {bytes_sent} of {content_length} promised "
+            f"bytes for media {media_ref}; aborting the connection"
+        )
+        response.force_close()
+        raise ConnectionResetError(
+            f"stream ended after {bytes_sent} of {content_length} bytes")
+
+    await response.write_eof()
+    return response
+
+
+# Explicit allowlist: this route must not become a directory walk. Each entry
+# names its own file, so the path is built from this table, not from the request.
+PLAYER_ASSET_DIR = Path(__file__).resolve().parent.parent / "template"
+PLAYER_ASSETS = {
+    "player.css": ("player.css", "text/css; charset=utf-8"),
+    "player.js": ("player.js", "application/javascript; charset=utf-8"),
+    "i18n.js": ("i18n.js", "application/javascript; charset=utf-8"),
+}
+# Safe to cache hard: the page links these with a ?v= content fingerprint.
+ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable"
+# name -> (etag, raw bytes, gzipped bytes).
+_asset_cache: dict[str, tuple[str, bytes, bytes]] = {}
+
+
+@routes.get("/assets/{name}", allow_head=True)
+async def player_asset(request: web.Request):
+    asset = PLAYER_ASSETS.get(request.match_info["name"])
+    if asset is None:
+        raise web.HTTPNotFound(text="Asset not found")
+    file_name, content_type = asset
+
+    path = PLAYER_ASSET_DIR / file_name
+    try:
+        stat = path.stat()
+    except OSError as e:
+        logger.error(f"Player asset missing: {file_name} - {e}")
+        raise web.HTTPNotFound(text="Asset not found") from e
+
+    # mtime+size is enough to revalidate a build-time asset.
+    etag = f'"{stat.st_mtime_ns:x}-{stat.st_size:x}"'
+    if etag in request.headers.get("If-None-Match", ""):
+        return web.Response(status=304, headers={"ETag": etag, "Cache-Control": ASSET_CACHE_CONTROL})
+
+    # The ETag covers mtime and size, so a cached body cannot go stale without
+    # the key changing. Both assets are small and bounded, so the read and the
+    # gzip happen once rather than per request.
+    cached = _asset_cache.get(file_name)
+    if cached is None or cached[0] != etag:
+        try:
+            raw = path.read_bytes()
+        except OSError as e:
+            logger.error(f"Player asset missing: {file_name} - {e}")
+            raise web.HTTPNotFound(text="Asset not found") from e
+        cached = (etag, raw, gzip.compress(raw, 6))
+        _asset_cache[file_name] = cached
+    _, body, compressed = cached
+
+    common = {
+        "Cache-Control": ASSET_CACHE_CONTROL,
+        "ETag": etag,
+        "X-Content-Type-Options": "nosniff",
+        # Gzip is negotiated per response, so the caches must not mix the two.
+        "Vary": "Accept-Encoding",
+    }
+    if "gzip" in request.headers.get("Accept-Encoding", "").lower():
+        response = web.Response(
+            body=compressed,
+            # charset= is passed separately, so the media type must not carry it.
+            content_type=content_type.split(";", 1)[0],
+            charset="utf-8",
+            headers={**common, "Content-Encoding": "gzip"},
+        )
+    else:
+        response = web.Response(
+            body=body,
+            content_type=content_type.split(";", 1)[0],
+            charset="utf-8",
+            headers=common,
+        )
+    return response
 
 
 @routes.get("/", allow_head=True)
@@ -298,7 +370,10 @@ async def status_endpoint(request):
                 "uptime": get_readable_time(uptime)
             },
             "telegram_bot": {
-                "username": f"@{StreamBot.username}",
+                "username": (
+                    f"@{StreamBot.username}"
+                    if getattr(StreamBot, "username", None) else None
+                ),
                 "active_clients": len(multi_clients)
             },
             "resources": {
@@ -336,7 +411,12 @@ async def canonical_media_preview(request: web.Request):
 
         file_name = file_record.get("file_name") or f"file_{secure_hash}"
         src = f"{Var.URL.rstrip('/')}/f/{secure_hash}/{quote_media_name(file_name)}"
-        rendered_page = await render_media_page(file_name, src, requested_action='stream')
+        rendered_page = await render_media_page(
+            file_name,
+            f"{src}?disposition=inline",
+            mime_type=file_record.get("mime_type") or "application/octet-stream",
+            file_size=int(file_record.get("file_size") or 0),
+        )
 
         response = web.Response(
             text=rendered_page,
@@ -365,8 +445,7 @@ async def media_preview(request: web.Request):
         path = request.match_info["path"]
         message_id, secure_hash = parse_media_request(path, request.query)
 
-        rendered_page = await render_page(
-            message_id, secure_hash, requested_action='stream')
+        rendered_page = await render_page(message_id, secure_hash)
 
         response = web.Response(
             text=rendered_page,
@@ -402,7 +481,6 @@ async def canonical_media_delivery(request: web.Request):
 
         client_id, streamer = select_optimal_client()
         work_loads[client_id] += 1
-
         try:
             _resolve_unique_id(file_record)
             media_ref = int(file_record["canonical_message_id"])
@@ -422,35 +500,48 @@ async def canonical_media_delivery(request: web.Request):
                             exc_info=True
                         )
 
-            return await _serve_media_response(
+            response = await _serve_media_response(
                 request,
                 file_info=file_record,
                 streamer=streamer,
-                client_id=client_id,
                 media_ref=media_ref,
                 fallback_message_id=fallback_message_id,
                 on_fallback_message=persist_refreshed_file_id
             )
+            return response
         except (FileNotFound, InvalidHash):
-            work_loads[client_id] -= 1
             raise
         except web.HTTPException as e:
-            work_loads[client_id] -= 1
             logger.debug(f"Client HTTP error in canonical stream: {e}")
             raise
         except Exception as e:
-            work_loads[client_id] -= 1
+            if request.get(HEADERS_SENT_KEY):
+                logger.debug(
+                    f"Canonical stream failed after headers sent: "
+                    f"{type(e).__name__} - {e}")
+                raise
             error_id = secrets.token_hex(6)
             logger.error(f"Canonical stream error {error_id}: {e}", exc_info=True)
             raise web.HTTPInternalServerError(
                 text=f"Server error during streaming: {error_id}") from e
+        finally:
+            work_loads[client_id] -= 1
     except (InvalidHash, FileNotFound) as e:
+        if request.get(HEADERS_SENT_KEY):
+            logger.debug(
+                f"Canonical stream raised {type(e).__name__} after headers "
+                f"sent: {e}")
+            raise
         logger.debug(f"Canonical client error: {type(e).__name__} - {e}", exc_info=True)
         raise web.HTTPNotFound(text="Resource not found") from e
     except web.HTTPException as e:
+        if request.get(HEADERS_SENT_KEY):
+            raise
         logger.warning(f"HTTP exception in canonical stream: {e}")
         raise
     except Exception as e:
+        if request.get(HEADERS_SENT_KEY):
+            raise
         error_id = secrets.token_hex(6)
         logger.error(f"Canonical server error {error_id}: {e}", exc_info=True)
         raise web.HTTPInternalServerError(
@@ -780,7 +871,6 @@ async def media_delivery(request: web.Request):
         client_id, streamer = select_optimal_client()
 
         work_loads[client_id] += 1
-
         try:
             file_info = await streamer.get_file_info(message_id)
             unique_id = _resolve_unique_id(file_info)
@@ -792,33 +882,43 @@ async def media_delivery(request: web.Request):
                 request,
                 file_info=file_info,
                 streamer=streamer,
-                client_id=client_id,
                 media_ref=message_id
             )
 
         except (FileNotFound, InvalidHash):
-            work_loads[client_id] -= 1
             raise
         except web.HTTPException as e:
-            work_loads[client_id] -= 1
             logger.debug(f"Client HTTP error in media stream: {e}")
             raise
         except Exception as e:
-            work_loads[client_id] -= 1
+            if request.get(HEADERS_SENT_KEY):
+                logger.debug(
+                    f"Stream failed after headers sent: {type(e).__name__} - {e}")
+                raise
             error_id = secrets.token_hex(6)
             logger.error(
                 f"Stream error {error_id}: {e}",
                 exc_info=True)
             raise web.HTTPInternalServerError(
                 text=f"Server error during streaming: {error_id}") from e
+        finally:
+            work_loads[client_id] -= 1
 
     except (InvalidHash, FileNotFound) as e:
+        if request.get(HEADERS_SENT_KEY):
+            logger.debug(
+                f"Stream raised {type(e).__name__} after headers sent: {e}")
+            raise
         logger.debug(f"Client error: {type(e).__name__} - {e}", exc_info=True)
         raise web.HTTPNotFound(text="Resource not found") from e
     except web.HTTPException as e:
+        if request.get(HEADERS_SENT_KEY):
+            raise
         logger.warning(f"HTTP exception in media stream: {e}")
         raise
     except Exception as e:
+        if request.get(HEADERS_SENT_KEY):
+            raise
         error_id = secrets.token_hex(6)
         logger.error(f"Server error {error_id}: {e}", exc_info=True)
         raise web.HTTPInternalServerError(
