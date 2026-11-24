@@ -5,16 +5,47 @@ the download routes answer Range requests and serve files far larger than RAM.
 """
 
 import asyncio
+import os
+from collections import deque
 from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, Optional
 
-from pyrogram import Client
+from pyrogram import Client, raw
 from pyrogram.errors import FloodWait
+from pyrogram.file_id import FileId, FileType
 from pyrogram.types import Message
 
 from Thunder.server.exceptions import FileNotFound
 from Thunder.utils.file_properties import get_media
 from Thunder.utils.logger import logger
 from Thunder.vars import Var
+
+
+CHUNK = 1024 * 1024
+# GetFile requests kept in flight per HTTP request. wzgram's own get_file paces
+# bots to a fixed request rate and shares one read-ahead budget between every
+# transfer, which caps a multi-connection download (aria2, IDM) at a few MB/s.
+# Serving reads straight from the media session, as pyrogram used to, does not.
+PREFETCH = max(1, int(os.environ.get("STREAM_PREFETCH", "4")))
+
+
+def _file_location(file_id: FileId):
+    if file_id.file_type == FileType.PHOTO:
+        return raw.types.InputPhotoFileLocation(
+            id=file_id.media_id,
+            access_hash=file_id.access_hash,
+            file_reference=file_id.file_reference,
+            thumb_size=file_id.thumbnail_size,
+        )
+    return raw.types.InputDocumentFileLocation(
+        id=file_id.media_id,
+        access_hash=file_id.access_hash,
+        file_reference=file_id.file_reference,
+        thumb_size=file_id.thumbnail_size,
+    )
+
+
+class _Unsupported(Exception):
+    """The direct path cannot serve this file; use the library's get_file."""
 
 
 class ByteStreamer:
@@ -39,6 +70,65 @@ class ByteStreamer:
         if not message or not message.media:
             raise FileNotFound(f"Message {message_id} not found")
         return message
+
+    async def _get_chunk(self, session, location, offset: int) -> bytes:
+        for _attempt in range(5):
+            try:
+                r = await session.invoke(
+                    raw.functions.upload.GetFile(location=location, offset=offset, limit=CHUNK),
+                    sleep_threshold=0,
+                )
+            except FloodWait as e:
+                if e.value > 60:
+                    raise
+                await asyncio.sleep(e.value)
+                continue
+            if isinstance(r, raw.types.upload.File):
+                return r.bytes
+            raise _Unsupported(type(r).__name__)
+        raise _Unsupported("repeated FloodWait")
+
+    async def _direct_chunks(self, message: Message, chunk_offset: int,
+                             chunk_limit: int) -> AsyncGenerator[bytes, None]:
+        media = get_media(message)
+        if media is None or not getattr(media, "file_id", None):
+            raise _Unsupported("no media")
+        file_id = FileId.decode(media.file_id)
+        if file_id.file_type in (FileType.CHAT_PHOTO, FileType.THUMBNAIL):
+            raise _Unsupported("chat photo")
+        location = _file_location(file_id)
+        session = await self.client.get_session(file_id.dc_id, is_media=True)
+
+        size = int(getattr(media, "file_size", 0) or 0)
+        last = (size + CHUNK - 1) // CHUNK if size else None
+        stop = chunk_offset + chunk_limit if chunk_limit else last
+        if stop is not None and last is not None:
+            stop = min(stop, last)
+
+        pending: deque = deque()
+        nxt = chunk_offset
+
+        def fill():
+            nonlocal nxt
+            while len(pending) < PREFETCH and (stop is None or nxt < stop):
+                pending.append(asyncio.ensure_future(self._get_chunk(session, location, nxt * CHUNK)))
+                nxt += 1
+
+        try:
+            fill()
+            while pending:
+                data = await pending.popleft()
+                if not data:
+                    return
+                yield data
+                if len(data) < CHUNK:
+                    return
+                fill()
+        finally:
+            for task in pending:
+                task.cancel()
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
 
     async def stream_file(
         self,
@@ -73,6 +163,15 @@ class ByteStreamer:
                         isinstance(target, Message)
                     ):
                         await on_fallback_message(target)
+                    try:
+                        async for chunk in self._direct_chunks(target, chunk_offset, chunk_limit):
+                            started_stream = True
+                            yield chunk
+                        return
+                    except _Unsupported as e:
+                        if started_stream:
+                            raise
+                        logger.debug(f"Direct stream unavailable ({e}); using get_file")
                     async for chunk in self.client.stream_media(
                         target, offset=chunk_offset, limit=chunk_limit
                     ):
