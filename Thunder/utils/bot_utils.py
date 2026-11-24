@@ -26,8 +26,16 @@ from Thunder.utils.shortener import shorten
 from Thunder.vars import Var
 
 
-async def build_welcome(bot: Client, user_name: str, lang: str = "en"):
-    txt = tr(lang, "start", name=user_name)
+def mention(user) -> str:
+    """A tappable Markdown mention of the user (brackets stripped so the name cannot break it)."""
+    if user is None:
+        return "there"
+    name = (user.first_name or user.username or "User").replace("[", "").replace("]", "")
+    return f"[{name}](tg://user?id={user.id})"
+
+
+async def build_welcome(bot: Client, user, lang: str = "en"):
+    txt = tr(lang, "start", name=mention(user))
     link, title = await get_force_info(bot)
 
     btns = [

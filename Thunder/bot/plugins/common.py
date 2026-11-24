@@ -99,7 +99,7 @@ async def start_command(bot: Client, msg: Message):
                     return await msg.reply_text(text=MSG_TOKEN_INVALID, quote=True)
 
     lang = await user_links.lang_for(user)
-    txt, markup = await build_welcome(bot, user.first_name if user else "Unknown", lang)
+    txt, markup = await build_welcome(bot, user, lang)
     try:
         await msg.reply_text(text=txt, reply_markup=markup, quote=True)
     except FloodWait as e:

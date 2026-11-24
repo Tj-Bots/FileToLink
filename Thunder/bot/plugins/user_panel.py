@@ -88,6 +88,8 @@ def _ttl_name(lang: str, key: str) -> str:
 
 def _settings_view(lang: str, s: dict):
     lang_label = tr(lang, "auto") if s["lang"] == "auto" else LANG_NAMES.get(s["lang"], s["lang"])
+    text = tr(lang, "settings", ttl=_ttl_name(lang, s["link_ttl"]), language=lang_label,
+              hist=tr(lang, "on") if s["history"] else tr(lang, "off"))
     rows = [
         [B(tr(lang, "s_ttl", v=_ttl_name(lang, s["link_ttl"])), callback_data="st:ttl")],
         [B(tr(lang, "s_lang", v=lang_label), callback_data="st:lang")],
@@ -95,7 +97,7 @@ def _settings_view(lang: str, s: dict):
         [B(tr(lang, "b_links"), callback_data="ml:p:0", style=ButtonStyle.PRIMARY)],
         [B(tr(lang, "b_back"), callback_data="back_to_start")],
     ]
-    return tr(lang, "settings"), InlineKeyboardMarkup(rows)
+    return text, InlineKeyboardMarkup(rows)
 
 
 def _ttl_view(lang: str, s: dict):

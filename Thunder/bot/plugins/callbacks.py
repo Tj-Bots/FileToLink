@@ -53,7 +53,7 @@ async def back_to_start_callback(client: Client, callback_query: CallbackQuery):
         await callback_query.answer()
         user = callback_query.from_user
         lang = await user_links.lang_for(user)
-        txt, markup = await build_welcome(client, user.first_name if user else "Unknown", lang)
+        txt, markup = await build_welcome(client, user, lang)
         try:
             await callback_query.message.edit_text(text=txt, reply_markup=markup)
         except FloodWait as e:
