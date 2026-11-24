@@ -20,7 +20,7 @@ from Thunder.utils.file_properties import get_fname, get_fsize, get_hash
 from Thunder.utils.force_channel import get_force_info
 from Thunder.utils.human_readable import humanbytes
 from Thunder.utils.logger import logger
-from Thunder.utils.messages import (MSG_BUTTON_GET_HELP, MSG_BUTTON_JOIN_CHANNEL, MSG_DC_UNKNOWN,
+from Thunder.utils.messages import (MSG_BUTTON_GET_HELP, MSG_DC_UNKNOWN,
                                     MSG_DC_USER_INFO, MSG_NEW_USER)
 from Thunder.utils.shortener import shorten
 from Thunder.vars import Var
@@ -38,18 +38,17 @@ async def build_welcome(bot: Client, user, lang: str = "en"):
     txt = tr(lang, "start", name=mention(user))
     link, title = await get_force_info(bot)
 
+    # The updates channel is the join-channel button, so the forced-channel
+    # button is not repeated here.
     btns = [
+        [InlineKeyboardButton(tr(lang, "b_channel"), url=UPDATES_CHANNEL_URL, style=ButtonStyle.SUCCESS),
+         InlineKeyboardButton(tr(lang, "b_group"), url=GROUP_URL, style=ButtonStyle.SUCCESS)],
         [InlineKeyboardButton(tr(lang, "b_help"), callback_data="help_command", style=ButtonStyle.PRIMARY),
          InlineKeyboardButton(tr(lang, "b_about"), callback_data="about_command", style=ButtonStyle.PRIMARY)],
         [InlineKeyboardButton(tr(lang, "b_links"), callback_data="ml:p:0", style=ButtonStyle.PRIMARY),
          InlineKeyboardButton(tr(lang, "b_settings"), callback_data="st", style=ButtonStyle.PRIMARY)],
-        [InlineKeyboardButton(tr(lang, "b_channel"), url=UPDATES_CHANNEL_URL, style=ButtonStyle.SUCCESS),
-         InlineKeyboardButton(tr(lang, "b_group"), url=GROUP_URL, style=ButtonStyle.SUCCESS)],
         [close_button(lang)],
     ]
-
-    if link:
-        btns.insert(0, [InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link)])
 
     return txt, InlineKeyboardMarkup(btns)
 

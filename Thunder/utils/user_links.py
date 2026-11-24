@@ -23,7 +23,7 @@ TTL_CHOICES: Dict[str, Optional[int]] = {
     "30d": 30 * 24 * 3600,
     "forever": None,
 }
-DEFAULT_SETTINGS: Dict[str, Any] = {"link_ttl": "forever", "history": True, "lang": "auto"}
+DEFAULT_SETTINGS: Dict[str, Any] = {"link_ttl": "24h", "history": True, "lang": "auto"}
 # How long an expired or deleted link is still listed before MongoDB removes it.
 KEEP_EXPIRED = datetime.timedelta(days=14)
 CODE_BYTES = 8  # 11 url-safe characters

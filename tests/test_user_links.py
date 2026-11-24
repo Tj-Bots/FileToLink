@@ -91,10 +91,10 @@ def fake_db(monkeypatch):
 FILE = {"public_hash": "abc123", "file_name": "Movie.2024.mkv", "file_size": 1024}
 
 
-async def test_default_is_forever_and_listed(fake_db):
+async def test_default_is_24h_and_listed(fake_db):
     links = await user_links.personal_links(1, FILE, shortener=False)
     assert "/l/" in links["online_link"] and "/watch/l/" in links["stream_link"]
-    assert links["expires_at"] is None
+    assert links["expires_at"] is not None and links["ttl"] == "24h"
     doc, state = await user_links.resolve(links["code"])
     assert state == "ok"
     listed, total = await user_links.list_links(1, 0, 10)
@@ -102,7 +102,6 @@ async def test_default_is_forever_and_listed(fake_db):
 
 
 async def test_24h_link_expires(fake_db, monkeypatch):
-    await user_links.set_setting(1, "link_ttl", "24h")
     links = await user_links.personal_links(1, FILE, shortener=False)
     assert links["expires_at"] is not None
     later = user_links._now() + datetime.timedelta(hours=25)

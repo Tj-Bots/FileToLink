@@ -60,7 +60,7 @@ def _now() -> datetime.datetime:
 
 
 def _tick(label: str, on: bool) -> str:
-    return f"✅ {label}" if on else label
+    return f"✓ {label}" if on else label
 
 
 def _left(lang: str, delta: datetime.timedelta) -> str:
@@ -91,7 +91,9 @@ def _settings_view(lang: str, s: dict):
     text = tr(lang, "settings", ttl=_ttl_name(lang, s["link_ttl"]), hist=hist)
     rows = [
         [B(tr(lang, "s_ttl"), callback_data="st:ttl")],
-        [B(tr(lang, "s_hist", v=hist), callback_data="st:h")],
+        [B(_tick(tr(lang, "s_hist", v=hist).replace("💾 ", "", 1) if s["history"] else tr(lang, "s_hist", v=hist),
+                 s["history"]), callback_data="st:h",
+           style=ButtonStyle.SUCCESS if s["history"] else ButtonStyle.DEFAULT)],
         [back_button(), close_button()],
     ]
     return text, InlineKeyboardMarkup(rows)
@@ -99,7 +101,8 @@ def _settings_view(lang: str, s: dict):
 
 def _ttl_view(lang: str, s: dict):
     keys = list(user_links.TTL_CHOICES)
-    buttons = [B(_tick(_ttl_name(lang, k), s["link_ttl"] == k), callback_data=f"st:t:{k}") for k in keys]
+    buttons = [B(_tick(_ttl_name(lang, k), s["link_ttl"] == k), callback_data=f"st:t:{k}",
+                 style=ButtonStyle.SUCCESS if s["link_ttl"] == k else ButtonStyle.DEFAULT) for k in keys]
     rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
     rows.append([back_button("st"), close_button()])
     return tr(lang, "ttl_title"), InlineKeyboardMarkup(rows)
