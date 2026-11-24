@@ -41,37 +41,33 @@ async def build_welcome(bot: Client, user, lang: str = "en"):
     btns = [
         [InlineKeyboardButton(tr(lang, "b_help"), callback_data="help_command"),
          InlineKeyboardButton(tr(lang, "b_about"), callback_data="about_command")],
-        [InlineKeyboardButton(tr(lang, "b_links"), callback_data="ml:p:0", style=ButtonStyle.PRIMARY),
-         InlineKeyboardButton(tr(lang, "b_settings"), callback_data="st", style=ButtonStyle.PRIMARY)],
-        [InlineKeyboardButton(tr(lang, "b_channel"), url=UPDATES_CHANNEL_URL, style=ButtonStyle.SUCCESS)],
+        [InlineKeyboardButton(tr(lang, "b_links"), callback_data="ml:p:0"),
+         InlineKeyboardButton(tr(lang, "b_settings"), callback_data="st")],
+        [close_button(lang)],
     ]
 
     if link:
-        btns.insert(0, [InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link, style=ButtonStyle.SUCCESS)])
+        btns.insert(0, [InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link)])
 
     return txt, InlineKeyboardMarkup(btns)
 
 
-UPDATES_CHANNEL_URL = "https://t.me/TJ_Bots"
+# Panel buttons carry no colour, except Back (blue) and Close (red); only the
+# link message itself has green buttons.
+def back_button(callback_data: str = "back_to_start", lang: str = "en") -> InlineKeyboardButton:
+    return InlineKeyboardButton(tr(lang, "b_back"), callback_data=callback_data, style=ButtonStyle.PRIMARY)
+
+
+def close_button(lang: str = "en") -> InlineKeyboardButton:
+    return InlineKeyboardButton(tr(lang, "b_close"), callback_data="close_panel", style=ButtonStyle.DANGER)
 
 
 def help_keyboard(force_button=None, lang: str = "en") -> InlineKeyboardMarkup:
-    rows = [
-        [InlineKeyboardButton(tr(lang, "b_back"), callback_data="back_to_start"),
-         InlineKeyboardButton(tr(lang, "b_about"), callback_data="about_command")],
-    ]
-    if force_button:
-        rows.append(force_button)
-    rows.append([InlineKeyboardButton(tr(lang, "b_channel"), url=UPDATES_CHANNEL_URL, style=ButtonStyle.SUCCESS)])
-    return InlineKeyboardMarkup(rows)
+    return InlineKeyboardMarkup([[back_button(lang=lang), close_button(lang)]])
 
 
 def about_keyboard(lang: str = "en") -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(tr(lang, "b_back"), callback_data="back_to_start"),
-         InlineKeyboardButton(tr(lang, "b_help"), callback_data="help_command")],
-        [InlineKeyboardButton(tr(lang, "b_channel"), url=UPDATES_CHANNEL_URL, style=ButtonStyle.SUCCESS)],
-    ])
+    return InlineKeyboardMarkup([[back_button(lang=lang), close_button(lang)]])
 
 
 def quote_media_name(file_name: str) -> str:

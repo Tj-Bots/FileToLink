@@ -30,7 +30,7 @@ _EN = {
         "> **I'm a Telegram file streaming bot and direct link generator** ⚡\n"
         "> Send me any file and get a watch link and a download link in seconds.\n\n"
         "**Works in private chats, groups and channels.**\n\n"
-        "💕 @TJ_Bots"
+        "💕 **@TJ_Bots**"
     ),
     "help": (
         "📖 **How to use me**\n\n"
@@ -52,7 +52,7 @@ _EN = {
         "> ✦ **Player :** audio tracks & subtitles in the browser\n"
         "> ✦ **Downloads :** fast, resumable, any size\n"
         "> ✦ **Links :** choose how long they last, revoke any time\n"
-        "> ✦ **Developer :** @TJ_Bots\n\n"
+        "> ✦ **Developer :** **@TJ_Bots**\n\n"
         "💕 If I help you, share me with your friends!"
     ),
     "b_links": "🗂 My links", "b_settings": "⚙️ Settings", "b_help": "📖 Help", "b_about": "⚜️ About",

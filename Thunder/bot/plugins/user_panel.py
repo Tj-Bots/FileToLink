@@ -10,7 +10,6 @@ import datetime
 import math
 
 from pyrogram import Client, filters
-from pyrogram.enums import ButtonStyle
 from pyrogram.errors import FloodWait, MessageNotModified
 from pyrogram.types import (CallbackQuery, InlineKeyboardButton,
                             InlineKeyboardMarkup, Message)
@@ -18,7 +17,7 @@ from pyrogram.types import (CallbackQuery, InlineKeyboardButton,
 from Thunder.bot import StreamBot
 from Thunder.utils import user_links
 from Thunder.utils.bot_i18n import tr
-from Thunder.utils.bot_utils import _build_links, log_newusr
+from Thunder.utils.bot_utils import _build_links, back_button, close_button, log_newusr
 from Thunder.utils.database import db
 from Thunder.utils.decorators import check_banned
 from Thunder.utils.human_readable import humanbytes
@@ -90,21 +89,18 @@ def _settings_view(lang: str, s: dict):
     hist = tr(lang, "on") if s["history"] else tr(lang, "off")
     text = tr(lang, "settings", ttl=_ttl_name(lang, s["link_ttl"]), hist=hist)
     rows = [
-        [B(tr(lang, "s_ttl"), callback_data="st:ttl", style=ButtonStyle.PRIMARY)],
-        [B(tr(lang, "s_hist", v=hist), callback_data="st:h",
-           style=ButtonStyle.SUCCESS if s["history"] else ButtonStyle.DANGER)],
-        [B(tr(lang, "b_back"), callback_data="back_to_start"),
-         B(tr(lang, "b_links"), callback_data="ml:p:0")],
+        [B(tr(lang, "s_ttl"), callback_data="st:ttl")],
+        [B(tr(lang, "s_hist", v=hist), callback_data="st:h")],
+        [back_button(), close_button()],
     ]
     return text, InlineKeyboardMarkup(rows)
 
 
 def _ttl_view(lang: str, s: dict):
     keys = list(user_links.TTL_CHOICES)
-    buttons = [B(_tick(_ttl_name(lang, k), s["link_ttl"] == k), callback_data=f"st:t:{k}",
-                 style=ButtonStyle.SUCCESS if s["link_ttl"] == k else ButtonStyle.DEFAULT) for k in keys]
+    buttons = [B(_tick(_ttl_name(lang, k), s["link_ttl"] == k), callback_data=f"st:t:{k}") for k in keys]
     rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
-    rows.append([B(tr(lang, "b_back"), callback_data="st")])
+    rows.append([back_button("st"), close_button()])
     return tr(lang, "ttl_title"), InlineKeyboardMarkup(rows)
 
 
@@ -164,9 +160,7 @@ async def _list_view(lang: str, uid: int, page: int):
     query = {"user_id": uid, "hidden": {"$ne": True}, "revoked": {"$ne": True}}
     total = await db.links_col.count_documents(query)
     if total == 0:
-        return tr(lang, "links_empty"), InlineKeyboardMarkup([
-            [B(tr(lang, "b_back"), callback_data="back_to_start")],
-        ])
+        return tr(lang, "links_empty"), InlineKeyboardMarkup([[back_button(), close_button()]])
     pages = max(1, math.ceil(total / PER_PAGE))
     page = min(max(0, page), pages - 1)
     docs, _ = await user_links.list_links(uid, page, PER_PAGE)
@@ -181,7 +175,7 @@ async def _list_view(lang: str, uid: int, page: int):
         {**query, "expires_at": {"$ne": None, "$lte": _now()}})
     if expired:
         rows.append([B(tr(lang, "b_clear"), callback_data="ml:c")])
-    rows.append([B(tr(lang, "b_back"), callback_data="back_to_start")])
+    rows.append([back_button(), close_button()])
     return tr(lang, "links", n=total), InlineKeyboardMarkup(rows)
 
 
@@ -195,14 +189,14 @@ async def _detail_view(lang: str, doc: dict, page: int):
         download_path, stream_path = user_links.link_paths(doc)
         links = await _build_links(download_path=download_path, stream_path=stream_path,
                                    media_name=doc["file_name"], media_size="", shortener=False)
-        rows.append([B(tr(lang, "b_watch"), url=links["stream_link"], style=ButtonStyle.SUCCESS),
-                     B(tr(lang, "b_download"), url=links["online_link"], style=ButtonStyle.PRIMARY)])
+        rows.append([B(tr(lang, "b_watch"), url=links["stream_link"]),
+                     B(tr(lang, "b_download"), url=links["online_link"])])
         rows.append([B(tr(lang, "b_copy"), copy_text=links["online_link"])])
     else:
         text += "\n\n" + tr(lang, "dead")
     rows.append([B(tr(lang, "b_extend"), callback_data=f"ml:e:{code}:{page}"),
-                 B(tr(lang, "b_delete"), callback_data=f"ml:d:{code}:{page}", style=ButtonStyle.DANGER)])
-    rows.append([B(tr(lang, "b_back"), callback_data=f"ml:p:{page}")])
+                 B(tr(lang, "b_delete"), callback_data=f"ml:d:{code}:{page}")])
+    rows.append([back_button(f"ml:p:{page}"), close_button()])
     return text, InlineKeyboardMarkup(rows)
 
 
@@ -210,14 +204,14 @@ def _extend_view(lang: str, doc: dict, page: int):
     code = doc["code"]
     buttons = [B(_ttl_name(lang, k), callback_data=f"ml:x:{code}:{k}:{page}") for k in user_links.TTL_CHOICES]
     rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
-    rows.append([B(tr(lang, "b_back"), callback_data=f"ml:v:{code}:{page}")])
+    rows.append([back_button(f"ml:v:{code}:{page}"), close_button()])
     return tr(lang, "ext_title"), InlineKeyboardMarkup(rows)
 
 
 def _delete_view(lang: str, doc: dict, page: int):
     code = doc["code"]
     return tr(lang, "del_q", name=_safe(doc["file_name"])), InlineKeyboardMarkup([[
-        B(tr(lang, "b_yes_del"), callback_data=f"ml:D:{code}:{page}", style=ButtonStyle.DANGER),
+        B(tr(lang, "b_yes_del"), callback_data=f"ml:D:{code}:{page}"),
         B(tr(lang, "b_cancel"), callback_data=f"ml:v:{code}:{page}"),
     ]])
 
