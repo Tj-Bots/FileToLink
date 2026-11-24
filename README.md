@@ -1,107 +1,92 @@
 <p align="center">
-  <img src="https://cdn.jsdelivr.net/gh/fyaz05/Resources@main/FileToLink/Thunder.jpg" alt="Thunder Logo" width="120">
-  <h1 align="center">⚡ Thunder</h1>
+  <img src="Thunder/assets/logo.png" alt="TJ Logo" width="120">
+</p>
+
+<h1 align="center">⚡ Thunder · File to Link</h1>
+
+<p align="center">
+  <b>Turn any Telegram file into a fast watch link and a direct download link.</b><br>
+  In-browser player with audio tracks and subtitles · links that expire or can be revoked · 17 languages on the watch page
 </p>
 
 <p align="center">
-  <b>High-Performance Telegram File-to-Link Bot for Direct Links & Streaming</b>
-</p>
-
-<p align="center">
-  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.15-blue?style=for-the-badge&logo=python" alt="Python Version"></a>
-  <a href="https://github.com/rjriajul/wzgram"><img src="https://img.shields.io/badge/wzgram-red?style=for-the-badge" alt="wzgram"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/fyaz05/FileToLink?style=for-the-badge&color=green" alt="License"></a>
-  <a href="https://t.me/Thunder_Updates"><img src="https://img.shields.io/badge/Telegram-Channel-blue?style=for-the-badge&logo=telegram" alt="Telegram Channel"></a>
+  <a href="https://t.me/TJ_Bots"><img src="https://img.shields.io/badge/Telegram-Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Channel"></a>
+  <a href="https://t.me/TJ_Bots_Chat"><img src="https://img.shields.io/badge/Telegram-Group-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Group"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.13+-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-green?style=for-the-badge" alt="License"></a>
 </p>
 
 <hr>
 
 ## 📑 Table of Contents
 
-- [About The Project](#about-the-project)
-- [How It Works](#how-it-works)
+- [What it does](#what-it-does)
 - [Features](#features)
+- [The watch page](#the-watch-page)
+- [Your links and settings](#your-links-and-settings)
 - [Configuration](#configuration)
-  - [Essential Configuration](#essential-configuration)
-  - [Optional Configuration](#optional-configuration)
-- [Usage and Commands](#usage-and-commands)
-  - [Basic Usage](#basic-usage)
-  - [Commands Reference](#commands-reference)
-- [Advanced Feature Setup](#advanced-feature-setup)
-  - [Token System](#token-system)
-  - [URL Shortening](#url-shortening)
-  - [Rate Limiting System](#rate-limiting-system)
-  - [Network Speed Testing](#network-speed-testing)
-- [Deployment Guide](#deployment-guide)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Quick Deploy](#quick-deploy)
-    - [Deploy to Koyeb](#deploy-to-koyeb)
-    - [Deploy to Render](#deploy-to-render)
-    - [Deploy to Railway](#deploy-to-railway)
-    - [Deploy to Heroku](#deploy-to-heroku)
-  - [Reverse Proxy Setup](#reverse-proxy-setup)
-- [Support & Community](#support--community)
-  - [Troubleshooting & FAQ](#troubleshooting--faq)
-  - [Contributing](#contributing)
-- [License](#license)
-- [Acknowledgments](#acknowledgments)
+- [Commands](#commands)
+- [Updating](#updating)
+- [Advanced setup](#advanced-feature-setup)
+- [Deployment](#deployment-guide)
+- [Support & FAQ](#support--community)
+- [Credits](#credits)
 
 <hr>
 
-## About The Project
+## What it does
 
-**Thunder** is a powerful Telegram bot that transforms Telegram files into high-speed direct links, perfect for both streaming and rapid downloading. Share files via HTTP(S) links without needing to download them from the Telegram client first.
+Send the bot any file (or reply to one with `/link` in a group) and it answers in seconds with:
 
-### 💡 Perfect For
+> 🖥 **Watch** — a page that plays the file in the browser
+> 📥 **Download** — a direct, resumable download link
 
-- 🚀 Bypassing Telegram's built-in download speed limits
-- ☁️ Unlimited cloud storage with fast streaming and download links
-- 🎬 Content creators sharing media files
-- 👥 Communities distributing resources
-- 🎓 Educational platforms sharing materials
-
-## How It Works
+The file is kept in your private storage channel (`BIN_CHANNEL`), so nothing has to be saved to the phone first.
 
 ```
-User Uploads File → Telegram Bot → Forwards to Channel → Generates Direct Link → Direct Download / Streaming
+You send a file → bot stores it in BIN_CHANNEL → you get a watch link + a download link
 ```
-
-1. **Upload** → User sends any file to the bot.
-2. **Store** → The bot forwards the file to your private storage channel (`BIN_CHANNEL`), where it is permanently saved to generate the link.
-3. **Generate** → A unique, permanent link is created.
-4. **Stream/Download** → Anyone with the link can stream or download the file directly in their browser.
-5. **Balance** → Multi-client support distributes the load for high availability.
 
 ## Features
 
-#### Core Functionality
+#### 🎬 Watch in the browser
+- Plays **MKV, MP4, HEVC, AV1 and more** (the container is read in the browser, so most files play without converting).
+- **Audio track picker** and **embedded subtitles**, with right-to-left subtitle fixing for Hebrew and Arabic.
+- Fullscreen, picture-in-picture, playback speed, sleep timer, double-tap to skip ±10 s, long-press to speed up.
+- The watch page speaks **17 languages** and follows the visitor's browser language.
 
-- ✅ **Direct Link Generation** - Convert any Telegram file into a direct HTTP(S) link.
-- ✅ **Permanent Links** - Links remain active as long as the file exists in the storage channel.
-- ✅ **Browser Streaming & Downloading** - Stream media directly or download files at high speed without a Telegram client.
-- ✅ **All File Types** - Supports video, audio, documents, images, and any other file format.
-- ✅ **Batch Processing** - Generate links for multiple files at once with a single command.
+#### 🔗 Links you control
+- Each user gets **personal links**: choose **24 hours, 7 days, 30 days or forever**.
+- `/mylinks` lists your links with time left; **extend** or **revoke** any of them.
+- An expired or revoked link shows a clear "expired" page.
 
-#### Performance & Scalability
+#### 🚀 Performance
+- Downloads are read straight from Telegram's media connection, several pieces at once, so multi-connection downloaders (aria2, IDM) get full speed.
+- **Multi-client support**: add `MULTI_TOKEN`s to spread the load.
+- Async from top to bottom (`aiohttp`, `asyncio`, MongoDB).
 
-- ✅ **Multi-Client Support** - Distributes traffic across multiple Telegram bots to avoid limits and increase throughput.
-- ✅ **Async Architecture** - Built with `aiohttp` and `asyncio` for non-blocking, high-performance operations.
-- ✅ **MongoDB Integration** - Ensures persistent and reliable data storage.
+#### 🛡️ Control
+- Token system, permanent authorization, bans, forced channel join, rate limiting.
+- Works in private chats, groups and channels. Batch mode: `/link 5`.
+- Owner tools: `/status`, `/stats`, `/broadcast`, `/log`, `/shell`, `/restart`, `/speedtest`.
 
-#### Security & Control
+## The watch page
 
-- 🔐 **Token Authentication** - Secure user access with a time-limited token system.
-- 🛡️ **Admin Controls** - Full suite of commands for user and bot management.
-- 👤 **User Authentication** - Require users to join a specific channel before they can use the bot.
-- ✅ **Channel/Group Support** - Fully functional in private chats, groups, and channels.
+| | |
+| :--- | :--- |
+| 🎧 **Audio & subtitles** | Pick the audio track and subtitles from a sheet; subtitle size, position, sync and style are adjustable. |
+| 📱 **Phone first** | Compact player on the page, fullscreen with gestures, works in Telegram's built-in browser. |
+| 🌍 **Languages** | English, עברית, العربية, فارسی, Русский, Українська, Español, Português, Français, Deutsch, Italiano, Türkçe, Bahasa Indonesia, हिन्दी, 中文, 日本語, 한국어. |
+| 📂 **Open in…** | One tap to open the link in VLC, MX Player, Infuse, nPlayer, mpv and others. |
 
-#### Customization
+## Your links and settings
 
-- 🌍 **Custom Domain** - Serve files from your own domain for a professional look.
-- 🔗 **URL Shortening** - Integrate with URL shortener services for clean, shareable links.
-- 🎨 **Custom Templates** - Personalize messages sent by the bot to match your brand.
-- 📈 **Media Info Display** - Shows file size, duration, and format details in the response message.
+In private chat the bot has two panels, both reachable from `/start`:
+
+- **⚙️ `/settings`** — *Link lifetime* (default **24 hours**) and *Save to My links* (default on).
+- **🗂 `/mylinks`** — every link you made, with the time left. Open one to watch, download, **extend** (24 h / 7 d / 30 d / forever) or **revoke** it. Revoking stops it working immediately, for everyone who has it.
+
+Links made before this feature, and links in groups and channels, keep working as before.
 
 ## Configuration
 
@@ -155,52 +140,50 @@ Copy `config_sample.env` to `config.env` and fill in your values.
 
 </details>
 
-## Usage and Commands
+## Commands
 
-### Basic Usage
-
-1. **Start** → Send `/start` to the bot.
-2. **Authenticate** → Join required channels (if configured).
-3. **Upload** → Send any media file.
-4. **Receive** → Get a direct streaming and download link.
-5. **Share** → Anyone can access the file via the link.
-
-### Commands Reference
-
-#### User Commands
+#### User commands
 
 | Command | Description |
 | :--- | :--- |
-| `/start` | Start the bot and get a welcome message. Also used for token activation. |
-| `/link` | Generates a link. For batches, **reply to the first file** of a group and specify the count. **Example:** `/link 5` will process that file and the next four. |
-| `/dc` | Get the data center (DC) of a user or file. Use `/dc id`, or reply to a file or user. |
-| `/ping` | Check if the bot is online and measure response time. |
-| `/about` | Get information about the bot. |
-| `/help` | Show help and usage instructions. |
+| `/start` | Welcome screen with quick buttons. Also used for token activation. |
+| `/settings` | Link lifetime and whether links are saved to *My links*. |
+| `/mylinks` | See, extend or revoke your links. |
+| `/link` | (Groups) Reply to a file. For several files, reply to the **first** one: `/link 5`. |
+| `/dc` | Data center of a user or file. |
+| `/ping` | Check that the bot is online. |
+| `/about` · `/help` | About the bot and how to use it. |
 
-#### Admin Commands
+#### Owner commands
 
 | Command | Description |
 | :--- | :--- |
-| `/status` | Check bot status, uptime, and resource usage. |
-| `/broadcast` | Send a message to all users (supports text, media, buttons). |
-| `/stats` | View usage statistics and analytics. |
-| `/ban` | Ban a user or channel (reply to message or use user/channel ID). |
-| `/unban` | Unban a user or channel. |
-| `/log` | Send bot logs. |
-| `/restart` | Restart the bot. |
-| `/shell` | Execute a shell command. |
-| `/speedtest` | Run network speed test and display comprehensive results. |
-| `/users` | Show total number of users. |
-| `/authorize` | Permanently authorize a user to use the bot (bypasses token system). |
-| `/deauthorize` | Remove permanent authorization from a user. |
-| `/listauth` | List all permanently authorized users. |
+| `/status` · `/stats` | Bot status, uptime, workload and usage. |
+| `/broadcast` | Send a message to all users. |
+| `/ban` · `/unban` | Ban or unban a user or channel. |
+| `/authorize` · `/deauthorize` · `/listauth` | Permanent access (bypasses the token system). |
+| `/users` | Number of users. |
+| `/log` | Send the bot log. |
+| `/restart` | Update from this repository and restart. |
+| `/shell` | Run a shell command. |
+| `/speedtest` | Network speed test. |
+
+## Updating
+
+`/restart` (or `bash thunder.sh`) **updates the bot from this repository first**, then starts it.
+
+- By default it follows `Tj-Bots/FileToLink`, branch `new`. Set `UPSTREAM_REPO` / `UPSTREAM_BRANCH` to follow another repository, or set `UPSTREAM_REPO=` (empty) to turn updating off.
+- With **git** available it fast-forwards the checkout. Without git (for example a Heroku slug) it downloads the branch as an archive and replaces only the code files; `config.env`, sessions, logs and the runtime are left alone.
+- Before changing anything it takes a snapshot, and if the new code can't start it **rolls back automatically**.
+- Heroku resets a dyno to its last deploy once a day, so keep the app connected to this repository's `new` branch if you want updates to stick.
 
 <details>
 <summary><h4>BotFather Commands Setup</h4></summary>
 
 ```text
-start - Initialize bot
+start - Welcome and quick buttons
+settings - Link lifetime and history
+mylinks - See, extend or revoke your links
 link - Generate direct link
 dc - Get data center info
 ping - Check bot status
@@ -298,8 +281,9 @@ This section covers the complete setup process for deploying Thunder, from prere
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/fyaz05/FileToLink.git
+git clone https://github.com/Tj-Bots/FileToLink.git
 cd FileToLink
+git checkout new
 
 # 2. Configure
 cp config_sample.env config.env
@@ -356,7 +340,7 @@ build context.
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/fyaz05/FileToLink.git
+git clone https://github.com/Tj-Bots/FileToLink.git
 cd FileToLink
 
 # 2. Setup virtual environment
@@ -382,21 +366,21 @@ python -m Thunder
 
 ### Deploy to Koyeb
 
-[![Deploy to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=docker&image=docker.io/fyaz05/thunder:latest&name=thunder&ports=8080;http;/&env[API_ID]=&env[API_HASH]=&env[BOT_TOKEN]=&env[BIN_CHANNEL]=&env[OWNER_ID]=&env[DATABASE_URL]=&env[FQDN]=)
+[![Deploy to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=git&repository=github.com/Tj-Bots/FileToLink&branch=new&builder=dockerfile&name=thunder&ports=8080;http;/&env[API_ID]=&env[API_HASH]=&env[BOT_TOKEN]=&env[BIN_CHANNEL]=&env[OWNER_ID]=&env[DATABASE_URL]=&env[FQDN]=)
 
 After deployment, to add any additional environment variables, use the Koyeb dashboard under **Settings** → **Environment Variables**.
 
 ### Deploy to Render
 
 1. Open [Render Dashboard](https://dashboard.render.com) → **New** → **Web Service**
-2. Choose **Existing Image**: `fyaz05/thunder:latest`
+2. Choose **Public Git Repository**: `https://github.com/Tj-Bots/FileToLink` (branch `new`, **Dockerfile** build)
 3. Add your environment variables
 4. Click **Deploy**
 
 ### Deploy to Railway
 
 1. Open [Railway](https://railway.app) → **New Project** → **Deploy Service**
-2. Choose **Docker Image**: `fyaz05/thunder:latest`
+2. Choose **GitHub Repo**: `Tj-Bots/FileToLink` (branch `new`; Railway builds the `Dockerfile`)
 3. Add your environment variables
 4. Click **Deploy**
 
@@ -425,11 +409,7 @@ After deployment, to add any additional environment variables, use the Koyeb das
    ```bash
    heroku ps:scale web=1
    ```
-7. Restarts update from `UPSTREAM_REPO` only when the deployment has a git checkout. A Heroku slug is built from a tarball (step 5) and carries no `.git`, so the update is skipped and the dyno starts on the code in the slug. Durable changes need a new slug:
-   ```bash
-   # Only takes effect on a deployment that has a .git directory (e.g. a VM checkout).
-   heroku config:set UPSTREAM_REPO="https://github.com/fyaz05/FileToLink" UPSTREAM_BRANCH="main"
-   ```
+7. `/restart` updates the code from this repository (branch `new`) even though a Heroku slug has no `.git` — see [Updating](#updating). Heroku resets the dyno daily, so for updates that stick, connect the app to the repository's `new` branch in the Heroku dashboard (**Deploy** → **GitHub**).
 
 > **Note:** Heroku provides HTTPS automatically. Set `FQDN` to `your-app-name.herokuapp.com` and `HAS_SSL` to `True`.
 
@@ -628,12 +608,15 @@ pass.
 
 Licensed under the [Apache License 2.0](LICENSE). See the `LICENSE` file for details.
 
-## Acknowledgments
+## Credits
 
-- [wzgram](https://github.com/rjriajul/wzgram) - Telegram MTProto API Framework
-- [aiohttp](https://github.com/aio-libs/aiohttp) - Asynchronous HTTP Client/Server
-- [PyMongo](https://github.com/mongodb/mongo-python-driver) - Asynchronous MongoDB Driver
-- [WarpCrypto](https://github.com/rjriajul/warpcrypto) - High-performance cryptography library (Rust)
+Thunder started as [fyaz05/FileToLink](https://github.com/fyaz05/FileToLink) and has since been reworked by [@TJ_Bots](https://t.me/TJ_Bots): a new watch page, personal links, and a new bot interface. The old look of the bot owes a lot to [FileStreamBot](https://github.com/avipatilpro/FileStreamBot).
+
+Built on:
+
+- [wzgram](https://github.com/rjriajul/wzgram) — Telegram MTProto framework
+- [movi-player](https://github.com/mrujjwalg/movi-player) — in-browser demuxing and decoding for the watch page
+- [aiohttp](https://github.com/aio-libs/aiohttp) · [PyMongo](https://github.com/mongodb/mongo-python-driver) · [WarpCrypto](https://github.com/rjriajul/warpcrypto)
 
 ## ⚠️ Disclaimer
 
@@ -643,6 +626,6 @@ This project is not affiliated with Telegram. Use it responsibly and in complian
 
 <p align="center">
   <b>⭐ Star this project if you find it useful!</b><br>
-  <a href="https://github.com/fyaz05/FileToLink/issues/new">Report Bug</a> •
-  <a href="https://github.com/fyaz05/FileToLink/issues/new">Request Feature</a>
+  <a href="https://github.com/Tj-Bots/FileToLink/issues/new">Report Bug</a> •
+  <a href="https://github.com/Tj-Bots/FileToLink/issues/new">Request Feature</a>
 </p>
