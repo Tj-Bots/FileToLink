@@ -43,10 +43,18 @@ load_dotenv('config.env', override=True)
 DEFAULT_REPO = "https://github.com/Tj-Bots/FileToLink"
 DEFAULT_BRANCH = "new"
 UPSTREAM_REPO = environ.get("UPSTREAM_REPO", DEFAULT_REPO).strip()
-UPSTREAM_BRANCH = (environ.get("UPSTREAM_BRANCH")
-                   or (DEFAULT_BRANCH if UPSTREAM_REPO == DEFAULT_REPO else "main")).strip()
 
 _GITHUB = re.compile(r"github\.com[/:]([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?/?$")
+
+
+def _is_default_repo(repo: str) -> bool:
+    """This project's repository, however the URL is spelled (.git, slash, case)."""
+    match = _GITHUB.search(repo)
+    return bool(match) and "/".join(match.groups()).lower() == "tj-bots/filetolink"
+
+
+UPSTREAM_BRANCH = (environ.get("UPSTREAM_BRANCH", "").strip()
+                   or (DEFAULT_BRANCH if _is_default_repo(UPSTREAM_REPO) else "main"))
 
 
 def _generated(name: str) -> bool:

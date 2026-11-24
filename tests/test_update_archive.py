@@ -70,3 +70,17 @@ def test_archive_paths_cannot_escape_the_tree(monkeypatch, slug):
 
     assert update._archive_update("https://github.com/Tj-Bots/FileToLink", "new") is True
     assert not os.path.exists(slug.parent / "escape.txt")
+
+
+@pytest.mark.parametrize("url", [
+    "https://github.com/Tj-Bots/FileToLink",
+    "https://github.com/Tj-Bots/FileToLink.git",
+    "https://github.com/tj-bots/filetolink/",
+    "git@github.com:Tj-Bots/FileToLink.git",
+])
+def test_every_spelling_of_this_repo_is_recognised(url):
+    assert update._is_default_repo(url)
+
+
+def test_other_repos_are_not_this_one():
+    assert not update._is_default_repo("https://github.com/fyaz05/FileToLink")
