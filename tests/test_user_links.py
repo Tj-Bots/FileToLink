@@ -161,3 +161,17 @@ async def test_route_serves_a_live_link(fake_db, monkeypatch):
     monkeypatch.setattr(stream_routes, "get_file_by_hash", fake_get_file_by_hash)
     link, record, gone = await stream_routes._personal_file(code)
     assert gone is None and record["public_hash"] == "abc123" and link["code"] == code
+
+
+def test_every_log_message_format_call_supplies_validity():
+    """MSG_NEW_FILE_REQUEST gained {validity}; a call that misses it would crash the handler."""
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent / "Thunder"
+    calls = 0
+    for path in root.rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        for match in re.finditer(r"MSG_NEW_FILE_REQUEST\.format\((.*?)\n\s*\)", text, re.S):
+            calls += 1
+            assert "validity=" in match.group(1), f"{path.name}: log message without validity"
+    assert calls >= 4

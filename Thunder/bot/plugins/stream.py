@@ -63,12 +63,25 @@ async def fwd_media(m_msg: Message) -> Optional[Message]:
         return None
 
 
-def links_text(links: Dict[str, Any]) -> str:
+def validity_text(links: Dict[str, Any]) -> str:
+    """How long the link works, e.g. "24 hours · until 25.11.2026 14:59 UTC"."""
     ttl, expires_at = links.get('ttl'), links.get('expires_at')
     if expires_at and ttl:
-        validity = tr('en', 'v_until', ttl=tr('en', f'ttl_{ttl}'), when=expires_at.strftime('%d.%m.%Y %H:%M'))
+        text = tr('en', 'v_until', ttl=tr('en', f'ttl_{ttl}'), when=expires_at.strftime('%d.%m.%Y %H:%M'))
     else:
-        validity = tr('en', 'v_forever')
+        text = tr('en', 'v_forever')
+    return text
+
+
+_SMALL_TO_PLAIN = str.maketrans("ᴀʙᴄᴅᴇғɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ", "abcdefghijklmnopqrstuvwxyz")
+
+
+def _plain(text: str) -> str:
+    return text.translate(_SMALL_TO_PLAIN)
+
+
+def links_text(links: Dict[str, Any]) -> str:
+    validity = validity_text(links)
     return tr(
         'en', 'ready',
         name=str(links['media_name']).replace('`', "'"),
@@ -114,6 +127,7 @@ async def send_channel_links(
         text = MSG_NEW_FILE_REQUEST.format(
             source_info=source_info,
             id_=source_id,
+            validity=_plain(validity_text(links)),
             online_link=links['online_link'],
             stream_link=links['stream_link']
         )
@@ -135,6 +149,7 @@ async def send_channel_links(
         text = MSG_NEW_FILE_REQUEST.format(
             source_info=source_info,
             id_=source_id,
+            validity=_plain(validity_text(links)),
             online_link=links['online_link'],
             stream_link=links['stream_link']
         )
@@ -388,6 +403,7 @@ async def channel_receive_handler(bot: Client, msg: Message):
                             MSG_NEW_FILE_REQUEST.format(
                                 source_info=source_info,
                                 id_=message.chat.id,
+                                validity=_plain(validity_text(links)),
                                 online_link=links['online_link'],
                                 stream_link=links['stream_link']
                             ),
@@ -399,6 +415,7 @@ async def channel_receive_handler(bot: Client, msg: Message):
                             MSG_NEW_FILE_REQUEST.format(
                                 source_info=source_info,
                                 id_=message.chat.id,
+                                validity=_plain(validity_text(links)),
                                 online_link=links['online_link'],
                                 stream_link=links['stream_link']
                             ),
@@ -465,7 +482,6 @@ async def process_single(
         if reused_existing and stored_msg:
             await safe_delete_message(stored_msg)
             stored_msg = None
-        log_links = None
         if canonical_record:
             links = await gen_canonical_links(
                 file_name=canonical_record["file_name"],
@@ -480,7 +496,7 @@ async def process_single(
             if requester:
                 try:
                     user_view = await user_links.personal_links(requester.id, canonical_record, shortener_val)
-                    log_links, links = links, user_view
+                    links = user_view
                 except Exception as e:
                     logger.error(f"Personal link failed for {requester.id}, sending the shared link: {e}",
                                  exc_info=True)
@@ -520,7 +536,7 @@ async def process_single(
         if source_info and source_id:
             try:
                 await send_channel_links(
-                    log_links or links,
+                    links,
                     source_info,
                     source_id,
                     target_msg=stored_msg,
@@ -529,7 +545,7 @@ async def process_single(
             except FloodWait as e:
                 await asyncio.sleep(e.value)
                 await send_channel_links(
-                    log_links or links,
+                    links,
                     source_info,
                     source_id,
                     target_msg=stored_msg,

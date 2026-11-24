@@ -12,6 +12,7 @@ from pyrogram.errors import FloodWait, MessageNotModified, MessageDeleteForbidde
 from pyrogram.types import (CallbackQuery, InlineKeyboardButton,
                             InlineKeyboardMarkup)
 
+from Thunder import __version__
 from Thunder.bot import StreamBot
 from Thunder.utils.bot_utils import about_keyboard, build_welcome, help_keyboard
 from Thunder.utils import user_links
@@ -105,14 +106,14 @@ async def about_callback(client: Client, callback_query: CallbackQuery):
         lang = await user_links.lang_for(callback_query.from_user)
         try:
             await callback_query.message.edit_text(
-                text=tr(lang, "about"),
+                text=tr(lang, "about", version=__version__),
                 reply_markup=about_keyboard(lang),
                 disable_web_page_preview=True
             )
         except FloodWait as e:
             await asyncio.sleep(e.value)
             await callback_query.message.edit_text(
-                text=tr(lang, "about"),
+                text=tr(lang, "about", version=__version__),
                 reply_markup=about_keyboard(lang),
                 disable_web_page_preview=True
             )

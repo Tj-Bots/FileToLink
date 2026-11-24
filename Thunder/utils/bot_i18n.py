@@ -49,11 +49,16 @@ _EN = {
     "about": (
         "⚜️ **About me**\n\n"
         "> ✦ **Name :** Thunder File to Link\n"
-        "> ✦ **Player :** audio tracks & subtitles in the browser\n"
-        "> ✦ **Downloads :** fast, resumable, any size\n"
-        "> ✦ **Links :** choose how long they last, revoke any time\n"
-        "> ✦ **Developer :** **@TJ_Bots**\n\n"
-        "💕 If I help you, share me with your friends!"
+        "> ✦ **Version :** `{version}`\n"
+        "> ✦ **Language :** [Python](https://www.python.org)\n"
+        "> ✦ **Library :** [wzgram](https://github.com/rjriajul/wzgram)\n"
+        "> ✦ **Server :** [aiohttp](https://github.com/aio-libs/aiohttp)\n"
+        "> ✦ **Database :** [MongoDB](https://www.mongodb.com)\n"
+        "> ✦ **Player :** [movi-player](https://github.com/mrujjwalg/movi-player)\n"
+        "> ✦ **Source :** [GitHub](https://github.com/Tj-Bots/FileToLink)\n"
+        "> ✦ **Developer :** **@TJ_Bots**\n"
+        "> ✦ **Channel :** [Tj Bots](https://t.me/TJ_Bots)\n"
+        "> ✦ **Group :** [Tj Bots Chat](https://t.me/TJ_Bots_Chat)"
     ),
     "b_links": "🗂 My links", "b_settings": "⚙️ Settings", "b_help": "📖 Help", "b_about": "⚜️ About",
     "b_back": "⬅️ Back", "b_close": "✖️ Close", "b_channel": "📢 Updates", "b_group": "💬 Group",

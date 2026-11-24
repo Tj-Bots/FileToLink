@@ -10,6 +10,7 @@ from pyrogram.errors import FloodWait, MessageNotModified
 from pyrogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
                             Message, User)
 
+from Thunder import __version__
 from Thunder.bot import StreamBot
 from Thunder.utils.bot_utils import (about_keyboard, build_welcome, gen_dc_txt,
                                      get_user, help_keyboard, log_newusr,
@@ -134,10 +135,12 @@ async def about_command(bot: Client, msg: Message):
 
     lang = await user_links.lang_for(msg.from_user)
     try:
-        await msg.reply_text(text=tr(lang, "about"), reply_markup=about_keyboard(lang), quote=True)
+        await msg.reply_text(text=tr(lang, "about", version=__version__), reply_markup=about_keyboard(lang),
+                                  quote=True, disable_web_page_preview=True)
     except FloodWait as e:
         await asyncio.sleep(e.value)
-        await msg.reply_text(text=tr(lang, "about"), reply_markup=about_keyboard(lang), quote=True)
+        await msg.reply_text(text=tr(lang, "about", version=__version__), reply_markup=about_keyboard(lang),
+                                  quote=True, disable_web_page_preview=True)
 
 async def send_user_dc(msg: Message, user: User):
     txt = await gen_dc_txt(user)
