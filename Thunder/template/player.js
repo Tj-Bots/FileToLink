@@ -299,8 +299,9 @@
     const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
     const isFs = () => stage.classList.contains('is-fs');
     const setFsClass = (on) => {
+        if (on !== stage.classList.contains('is-fs')) closeSheets();
         stage.classList.toggle('is-fs', on);
-        document.body.style.overflow = on ? 'hidden' : '';
+        document.body.classList.toggle('tj-fs', on);
     };
     const enterFs = async () => {
         const req = stage.requestFullscreen || stage.webkitRequestFullscreen;
@@ -452,13 +453,26 @@
 
     // ------------------------------------------------------------ sheets
     const sheets = [...stage.querySelectorAll('.sheet')];
+    // In fullscreen the sheets must live inside the stage (nothing else is
+    // shown); otherwise they open over the whole page, like the app does.
+    const placeSheets = () => {
+        const floating = !isFs();
+        const host = floating ? document.body : stage;
+        [ui.scrim, ...sheets].forEach((n) => {
+            n.classList.toggle('floating', floating);
+            if (n.parentNode !== host) host.appendChild(n);
+        });
+    };
+    const resetSheet = (s) => { s.style.transform = ''; s.style.removeProperty('--pull'); s.classList.remove('dragging'); };
     const closeSheets = () => {
-        sheets.forEach((s) => { s.hidden = true; s.style.transform = ''; });
+        sheets.forEach((s) => { s.hidden = true; resetSheet(s); });
         ui.scrim.hidden = true;
+        ui.scrim.style.opacity = '';
         scheduleHide();
     };
     const openSheet = (id) => {
-        sheets.forEach((s) => { s.hidden = s.id !== id; s.style.transform = ''; });
+        placeSheets();
+        sheets.forEach((s) => { s.hidden = s.id !== id; resetSheet(s); });
         ui.scrim.hidden = false;
         keepControls();
     };
@@ -471,17 +485,26 @@
         grips.forEach((g) => {
             g.addEventListener('pointerdown', (e) => {
                 if (e.target.closest('button')) return;
-                startY = e.clientY; g.setPointerCapture(e.pointerId); sheet.style.transition = 'none';
+                startY = e.clientY; g.setPointerCapture(e.pointerId); sheet.classList.add('dragging');
             });
             g.addEventListener('pointermove', (e) => {
                 if (startY == null) return;
-                sheet.style.transform = `translateY(${Math.max(0, e.clientY - startY)}px)`;
+                const dy = Math.max(0, e.clientY - startY);
+                // The sheet tints as it is pulled down; the backdrop clears.
+                const pull = Math.min(1, dy / Math.max(120, sheet.offsetHeight * 0.45));
+                sheet.style.transform = `translateY(${dy}px)`;
+                sheet.style.setProperty('--pull', pull.toFixed(3));
+                ui.scrim.style.opacity = String(1 - pull * 0.7);
             });
             const end = (e) => {
                 if (startY == null) return;
                 const dy = e.clientY - startY;
-                startY = null; sheet.style.transition = '';
-                if (dy > 70) closeSheets(); else sheet.style.transform = '';
+                startY = null;
+                sheet.classList.remove('dragging');
+                if (dy > 70) { closeSheets(); return; }
+                sheet.style.transform = '';
+                sheet.style.removeProperty('--pull');
+                ui.scrim.style.opacity = '';
             };
             g.addEventListener('pointerup', end);
             g.addEventListener('pointercancel', end);

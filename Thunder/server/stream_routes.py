@@ -285,6 +285,7 @@ PLAYER_ASSETS = {
     "player.css": ("player.css", "text/css; charset=utf-8"),
     "player.js": ("player.js", "application/javascript; charset=utf-8"),
     "i18n.js": ("i18n.js", "application/javascript; charset=utf-8"),
+    "logo.png": ("../assets/logo.png", "image/png"),
 }
 # Safe to cache hard: the page links these with a ?v= content fingerprint.
 ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable"
@@ -324,6 +325,12 @@ async def player_asset(request: web.Request):
         cached = (etag, raw, gzip.compress(raw, 6))
         _asset_cache[file_name] = cached
     _, body, compressed = cached
+
+    if not content_type.startswith(("text/", "application/javascript")):
+        # Binary (the logo): already compressed, and it has no charset. Served
+        # under a fixed URL, so it is revalidated rather than cached forever.
+        return web.Response(body=body, content_type=content_type, headers={
+            "Cache-Control": "public, max-age=86400", "ETag": etag, "X-Content-Type-Options": "nosniff"})
 
     common = {
         "Cache-Control": ASSET_CACHE_CONTROL,

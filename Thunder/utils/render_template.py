@@ -17,7 +17,8 @@ from Thunder.vars import Var
 
 SITE_NAME = "Thunder"
 REPO_URL = "https://github.com/Tj-Bots/FileToLink"
-LOGO_URL = "https://cdn.jsdelivr.net/gh/Tj-Bots/FileToLink@main/Thunder/assets/logo.png"
+# Served by the bot itself (/assets/logo.png), so it cannot go missing from a CDN.
+LOGO_PATH = "assets/logo.png"
 
 # Module-relative: the bot may be started from any working directory.
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "template"
@@ -117,7 +118,7 @@ async def render_media_page(
         is_image=kind == "image",
         site_name=SITE_NAME,
         repo_url=REPO_URL,
-        logo_url=LOGO_URL,
+        logo_url=urllib.parse.urljoin(Var.URL, LOGO_PATH) if Var.URL else f"/{LOGO_PATH}",
         asset_version=ASSET_VERSION,
     )
 

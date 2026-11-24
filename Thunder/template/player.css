@@ -72,8 +72,8 @@ svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
 
 /* ---------- Page ---------- */
 .page { max-width: 1120px; margin: 0 auto; padding: 8px 18px 24px; }
-.watch { position: relative; animation: rise .7s var(--ease) both; }
-.details { animation: rise .7s .12s var(--ease) both; }
+.watch { position: relative; animation: rise .7s var(--ease) backwards; }
+.details { animation: rise .7s .12s var(--ease) backwards; }
 @keyframes rise { from { opacity: 0; transform: translateY(18px); } }
 
 /* Glow behind the player: movi paints the frame colour onto it on desktop;
@@ -402,7 +402,13 @@ svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: pop .25s var(--ease);
 }
 
-/* ---------- Sheets (inside the stage, like the app) ---------- */
+/* In-page fullscreen (no Fullscreen API, e.g. in-app browsers): nothing of the
+   page may paint over the player. */
+body.tj-fs { overflow: hidden; }
+body.tj-fs .topbar, body.tj-fs .details, body.tj-fs .foot, body.tj-fs .ambient { display: none; }
+body.tj-fs .watch { animation: none; }
+
+/* ---------- Sheets ---------- */
 .scrim { position: absolute; inset: 0; z-index: 9; background: rgba(0, 0, 0, .45); animation: fade .25s; }
 @keyframes fade { from { opacity: 0; } }
 .sheet {
@@ -413,7 +419,21 @@ svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
     animation: sheet-in .3s var(--ease); transition: transform .25s var(--ease);
 }
 @keyframes sheet-in { from { transform: translateY(100%); } }
-.stage:not(.is-fs) .sheet { max-height: 92%; min-height: 70%; }
+/* Outside fullscreen the sheet opens over the page, not squeezed into the player. */
+.scrim.floating { position: fixed; z-index: 60; }
+.sheet.floating {
+    position: fixed; z-index: 61; max-height: 80vh; min-height: 0; max-width: 680px; margin: 0 auto;
+    padding-bottom: var(--safe-b);
+}
+.sheet::before {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(96, 165, 250, .4), rgba(139, 92, 246, .14) 60%, transparent);
+    opacity: var(--pull, 0);
+}
+.sheet.dragging { transition: none; }
+.sheet.dragging .grab { background: var(--accent-2); width: 56px; box-shadow: 0 0 12px rgba(96, 165, 250, .8); }
+.grab { transition: width .2s, background .2s, box-shadow .2s; }
+.stage:not(.is-fs) .sheet:not(.floating) { max-height: 92%; min-height: 70%; }
 .grab { width: 40px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .28); margin: 8px auto 0; flex: none; touch-action: none; }
 .sheet-head { direction: ltr; display: flex; align-items: center; gap: 6px; padding: 2px 8px 6px; flex: none; touch-action: none; }
 .sheet-head h3 { flex: 1; margin: 0; text-align: center; font-size: 16px; font-weight: 600; }
