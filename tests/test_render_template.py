@@ -99,8 +99,8 @@ async def test_attribute_context_escapes_quotes_and_angles():
 async def test_audio_page_uses_the_player():
     page = await render_template.render_media_page("song.mp3", URL_WITH_AMPERSAND, mime_type="audio/mpeg")
 
-    assert '<video id="player"' in page
-    assert "cinema--audio" in page
+    assert '<movi-player id="player"' in page
+    assert "watch--audio" in page
 
 
 async def test_image_page_renders_an_image_viewer_and_no_player():
@@ -109,8 +109,8 @@ async def test_image_page_renders_an_image_viewer_and_no_player():
     )
 
     assert 'class="image-viewer"' in page
-    assert '<video id="player"' not in page
-    assert "cinema--fallback" in page
+    assert '<movi-player id="player"' not in page
+    assert "watch--file" in page
 
 
 async def test_non_media_page_offers_a_download():
@@ -120,13 +120,13 @@ async def test_non_media_page_offers_a_download():
 
     assert 'class="non-media"' in page
     assert "application/pdf" in page
-    assert '<video id="player"' not in page
+    assert '<movi-player id="player"' not in page
 
 
 async def test_player_page_has_the_player_and_its_scripts():
     page = await render_template.render_media_page("clip.mkv", URL_WITH_AMPERSAND, mime_type="video/x-matroska")
 
-    assert '<video id="player"' in page
+    assert '<movi-player id="player"' in page
     assert 'id="playerStage"' in page
     assert "/assets/i18n.js?v=" in page
 
@@ -168,7 +168,7 @@ async def test_octet_stream_mkv_still_gets_the_player():
         mime_type="application/octet-stream",
     )
 
-    assert '<video id="player"' in page
+    assert '<movi-player id="player"' in page
     assert 'class="non-media"' not in page
     assert _config_blob(page)["isVideo"] is True
 

@@ -6,6 +6,7 @@ window.__TJ_I18N__ = {
     langs: {
         en: {
             _name: 'English',
+            settings: 'Settings', share: 'Share', playError: 'This file can\'t be played in the browser.',
             sleep: 'Sleep', lock: 'Lock', subtitles: 'Subtitles', audio: 'Audio', openIn: 'Open In',
             notPlaying: 'If video not playing', useExternal: 'Use External Player', tapUnlock: 'Tap to unlock',
             noSubs: 'No embedded subtitles found.', oneAudio: 'Only one audio track.',
@@ -28,6 +29,7 @@ window.__TJ_I18N__ = {
         },
         he: {
             _name: 'עברית',
+            settings: 'הגדרות', share: 'שיתוף', playError: 'לא ניתן לנגן את הקובץ בדפדפן.',
             sleep: 'טיימר שינה', lock: 'נעילה', subtitles: 'כתוביות', audio: 'שמע', openIn: 'פתח בנגן',
             notPlaying: 'הסרטון לא מתנגן?', useExternal: 'פתח בנגן חיצוני', tapUnlock: 'הקש לביטול הנעילה',
             noSubs: 'לא נמצאו כתוביות בקובץ.', oneAudio: 'יש רק ערוץ שמע אחד.',
@@ -50,6 +52,7 @@ window.__TJ_I18N__ = {
         },
         ar: {
             _name: 'العربية',
+            settings: 'الإعدادات', share: 'مشاركة', playError: 'لا يمكن تشغيل هذا الملف في المتصفح.',
             sleep: 'مؤقت النوم', lock: 'قفل', subtitles: 'الترجمة', audio: 'الصوت', openIn: 'فتح في',
             notPlaying: 'الفيديو لا يعمل؟', useExternal: 'استخدم مشغلًا خارجيًا', tapUnlock: 'اضغط لإلغاء القفل',
             noSubs: 'لا توجد ترجمات مضمنة.', oneAudio: 'يوجد مسار صوت واحد فقط.',
@@ -72,6 +75,7 @@ window.__TJ_I18N__ = {
         },
         fa: {
             _name: 'فارسی',
+            settings: 'تنظیمات', share: 'اشتراک‌گذاری', playError: 'این فایل در مرورگر پخش نمی‌شود.',
             sleep: 'تایمر خواب', lock: 'قفل', subtitles: 'زیرنویس', audio: 'صدا', openIn: 'باز کردن در',
             notPlaying: 'ویدیو پخش نمی‌شود؟', useExternal: 'از پخش‌کننده خارجی استفاده کنید', tapUnlock: 'برای باز کردن قفل ضربه بزنید',
             noSubs: 'زیرنویس داخلی پیدا نشد.', oneAudio: 'فقط یک ترک صوتی وجود دارد.',
@@ -94,6 +98,7 @@ window.__TJ_I18N__ = {
         },
         ru: {
             _name: 'Русский',
+            settings: 'Настройки', share: 'Поделиться', playError: 'Этот файл нельзя воспроизвести в браузере.',
             sleep: 'Сон', lock: 'Блокировка', subtitles: 'Субтитры', audio: 'Аудио', openIn: 'Открыть в',
             notPlaying: 'Видео не воспроизводится?', useExternal: 'Используйте внешний плеер', tapUnlock: 'Нажмите, чтобы разблокировать',
             noSubs: 'Встроенные субтитры не найдены.', oneAudio: 'Только одна аудиодорожка.',
@@ -116,6 +121,7 @@ window.__TJ_I18N__ = {
         },
         uk: {
             _name: 'Українська',
+            settings: 'Налаштування', share: 'Поділитися', playError: 'Цей файл не можна відтворити в браузері.',
             sleep: 'Сон', lock: 'Блокування', subtitles: 'Субтитри', audio: 'Аудіо', openIn: 'Відкрити в',
             notPlaying: 'Відео не відтворюється?', useExternal: 'Скористайтеся зовнішнім плеєром', tapUnlock: 'Торкніться, щоб розблокувати',
             noSubs: 'Вбудованих субтитрів не знайдено.', oneAudio: 'Лише одна аудіодоріжка.',
@@ -138,6 +144,7 @@ window.__TJ_I18N__ = {
         },
         es: {
             _name: 'Español',
+            settings: 'Ajustes', share: 'Compartir', playError: 'Este archivo no se puede reproducir en el navegador.',
             sleep: 'Dormir', lock: 'Bloquear', subtitles: 'Subtítulos', audio: 'Audio', openIn: 'Abrir en',
             notPlaying: '¿El video no se reproduce?', useExternal: 'Usa un reproductor externo', tapUnlock: 'Toca para desbloquear',
             noSubs: 'No se encontraron subtítulos integrados.', oneAudio: 'Solo hay una pista de audio.',
@@ -160,6 +167,7 @@ window.__TJ_I18N__ = {
         },
         pt: {
             _name: 'Português',
+            settings: 'Configurações', share: 'Compartilhar', playError: 'Este arquivo não pode ser reproduzido no navegador.',
             sleep: 'Dormir', lock: 'Bloquear', subtitles: 'Legendas', audio: 'Áudio', openIn: 'Abrir em',
             notPlaying: 'O vídeo não reproduz?', useExternal: 'Use um player externo', tapUnlock: 'Toque para desbloquear',
             noSubs: 'Nenhuma legenda embutida encontrada.', oneAudio: 'Só há uma faixa de áudio.',
@@ -182,6 +190,7 @@ window.__TJ_I18N__ = {
         },
         fr: {
             _name: 'Français',
+            settings: 'Paramètres', share: 'Partager', playError: 'Ce fichier ne peut pas être lu dans le navigateur.',
             sleep: 'Veille', lock: 'Verrouiller', subtitles: 'Sous-titres', audio: 'Audio', openIn: 'Ouvrir dans',
             notPlaying: 'La vidéo ne se lit pas ?', useExternal: 'Utilisez un lecteur externe', tapUnlock: 'Touchez pour déverrouiller',
             noSubs: 'Aucun sous-titre intégré trouvé.', oneAudio: 'Une seule piste audio.',
@@ -204,6 +213,7 @@ window.__TJ_I18N__ = {
         },
         de: {
             _name: 'Deutsch',
+            settings: 'Einstellungen', share: 'Teilen', playError: 'Diese Datei kann im Browser nicht abgespielt werden.',
             sleep: 'Schlaf', lock: 'Sperren', subtitles: 'Untertitel', audio: 'Audio', openIn: 'Öffnen in',
             notPlaying: 'Video spielt nicht ab?', useExternal: 'Externen Player verwenden', tapUnlock: 'Zum Entsperren tippen',
             noSubs: 'Keine eingebetteten Untertitel gefunden.', oneAudio: 'Nur eine Audiospur.',
@@ -226,6 +236,7 @@ window.__TJ_I18N__ = {
         },
         it: {
             _name: 'Italiano',
+            settings: 'Impostazioni', share: 'Condividi', playError: 'Questo file non può essere riprodotto nel browser.',
             sleep: 'Timer', lock: 'Blocca', subtitles: 'Sottotitoli', audio: 'Audio', openIn: 'Apri in',
             notPlaying: 'Il video non parte?', useExternal: 'Usa un lettore esterno', tapUnlock: 'Tocca per sbloccare',
             noSubs: 'Nessun sottotitolo incorporato.', oneAudio: 'Una sola traccia audio.',
@@ -248,6 +259,7 @@ window.__TJ_I18N__ = {
         },
         tr: {
             _name: 'Türkçe',
+            settings: 'Ayarlar', share: 'Paylaş', playError: 'Bu dosya tarayıcıda oynatılamıyor.',
             sleep: 'Uyku', lock: 'Kilit', subtitles: 'Altyazı', audio: 'Ses', openIn: 'Şurada aç',
             notPlaying: 'Video oynatılmıyor mu?', useExternal: 'Harici oynatıcı kullanın', tapUnlock: 'Kilidi açmak için dokunun',
             noSubs: 'Gömülü altyazı bulunamadı.', oneAudio: 'Yalnızca bir ses parçası var.',
@@ -270,6 +282,7 @@ window.__TJ_I18N__ = {
         },
         id: {
             _name: 'Bahasa Indonesia',
+            settings: 'Pengaturan', share: 'Bagikan', playError: 'File ini tidak dapat diputar di browser.',
             sleep: 'Tidur', lock: 'Kunci', subtitles: 'Subtitle', audio: 'Audio', openIn: 'Buka di',
             notPlaying: 'Video tidak berjalan?', useExternal: 'Gunakan pemutar eksternal', tapUnlock: 'Ketuk untuk membuka kunci',
             noSubs: 'Tidak ada subtitle bawaan.', oneAudio: 'Hanya ada satu trek audio.',
@@ -292,6 +305,7 @@ window.__TJ_I18N__ = {
         },
         hi: {
             _name: 'हिन्दी',
+            settings: 'सेटिंग्स', share: 'शेयर करें', playError: 'यह फ़ाइल ब्राउज़र में नहीं चल सकती।',
             sleep: 'स्लीप', lock: 'लॉक', subtitles: 'सबटाइटल', audio: 'ऑडियो', openIn: 'इसमें खोलें',
             notPlaying: 'वीडियो नहीं चल रहा?', useExternal: 'बाहरी प्लेयर का उपयोग करें', tapUnlock: 'अनलॉक करने के लिए टैप करें',
             noSubs: 'कोई इनबिल्ट सबटाइटल नहीं मिला।', oneAudio: 'केवल एक ऑडियो ट्रैक है।',
@@ -314,6 +328,7 @@ window.__TJ_I18N__ = {
         },
         zh: {
             _name: '中文',
+            settings: '设置', share: '分享', playError: '此文件无法在浏览器中播放。',
             sleep: '定时', lock: '锁定', subtitles: '字幕', audio: '音频', openIn: '打开方式',
             notPlaying: '视频无法播放？', useExternal: '使用外部播放器', tapUnlock: '点按解锁',
             noSubs: '未找到内嵌字幕。', oneAudio: '只有一条音轨。',
@@ -336,6 +351,7 @@ window.__TJ_I18N__ = {
         },
         ja: {
             _name: '日本語',
+            settings: '設定', share: '共有', playError: 'このファイルはブラウザで再生できません。',
             sleep: 'スリープ', lock: 'ロック', subtitles: '字幕', audio: '音声', openIn: '別のアプリで開く',
             notPlaying: '再生できませんか？', useExternal: '外部プレーヤーを使用', tapUnlock: 'タップしてロック解除',
             noSubs: '埋め込み字幕が見つかりません。', oneAudio: '音声トラックは1つだけです。',
@@ -358,6 +374,7 @@ window.__TJ_I18N__ = {
         },
         ko: {
             _name: '한국어',
+            settings: '설정', share: '공유', playError: '이 파일은 브라우저에서 재생할 수 없습니다.',
             sleep: '취침', lock: '잠금', subtitles: '자막', audio: '오디오', openIn: '다른 앱으로 열기',
             notPlaying: '영상이 재생되지 않나요?', useExternal: '외부 플레이어 사용', tapUnlock: '탭하여 잠금 해제',
             noSubs: '내장 자막이 없습니다.', oneAudio: '오디오 트랙이 하나뿐입니다.',

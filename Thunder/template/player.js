@@ -1,156 +1,55 @@
+/* Thunder watch page.
+ * Page chrome (language, copy, share, open-in) plus a custom control layer
+ * over <movi-player>, which does the demuxing/decoding (MKV, HEVC, audio
+ * tracks, embedded subtitles). movi's own UI is left off; this file drives it.
+ */
 (() => {
     'use strict';
 
-    // ═══════════════════════════════════════════
-    // CONFIG & DOM
-    // ═══════════════════════════════════════════
-    const CONFIG = window.__CINEMA_CONFIG__ || {};
-    const VIDEO_SRC = CONFIG.src || '';
-    const FILE_NAME = CONFIG.fileName || document.title;
-
-    const stage = document.getElementById('playerStage');
-    const player = document.getElementById('player');
-    const tapLayer = document.getElementById('tapLayer');
-    const bgMessage = document.getElementById('bgMessage');
-
-    const backBtn = document.getElementById('backBtn');
-    const shareBtn = document.getElementById('shareBtn');
-    const pipBtn = document.getElementById('pipBtn');
-    const fullscreenBtn = document.getElementById('fullscreenBtn');
-    const iconFsEnter = fullscreenBtn?.querySelector('.icon-fs-enter');
-    const iconFsExit = fullscreenBtn?.querySelector('.icon-fs-exit');
-
-    const metaDuration = document.getElementById('metaDuration');
-    const metaResolution = document.getElementById('metaResolution');
-    const pageCopyBtn = document.getElementById('pageCopyBtn');
-    const pageOpenInBtn = document.getElementById('pageOpenInBtn');
-
-    const seekBackBtn = document.getElementById('seekBackBtn');
-    const seekFwdBtn = document.getElementById('seekFwdBtn');
-    const playBtn = document.getElementById('playBtn');
-    const iconPlay = playBtn?.querySelector('.icon-play');
-    const iconPause = playBtn?.querySelector('.icon-pause');
-    const iconSpinner = playBtn?.querySelector('.icon-spinner');
-
-    const brightnessWrap = document.getElementById('brightnessWrap');
-    const brightnessSlider = document.getElementById('brightnessSlider');
-    const volumeWrap = document.getElementById('volumeWrap');
-    const volumeSlider = document.getElementById('volumeSlider');
-    const volumeIcon = document.getElementById('volumeIcon');
-
-    const seekBar = document.getElementById('seekBar');
-    const timeCurrent = document.getElementById('timeCurrent');
-    const timeDuration = document.getElementById('timeDuration');
-
-    const speedBtn = document.getElementById('speedBtn');
-    const speedLabel = document.getElementById('speedLabel');
-    const topSpeedBtn = document.getElementById('topSpeedBtn');
-    const topSpeedLabel = document.getElementById('topSpeedLabel');
-    const topTracksBtn = document.getElementById('topTracksBtn');
-    const sleepBtn = document.getElementById('sleepBtn');
-    const lockBtn = document.getElementById('lockBtn');
-    const unlockBtn = document.getElementById('unlockBtn');
-    const tracksBtn = document.getElementById('tracksBtn');
-    const openInBtn = document.getElementById('openInBtn');
-
-    const sheetBackdrop = document.getElementById('sheetBackdrop');
-    const speedSheet = document.getElementById('speedSheet');
-    const speedOptions = document.getElementById('speedOptions');
-    const sleepSheet = document.getElementById('sleepSheet');
-    const sleepOptions = document.getElementById('sleepOptions');
-    const tracksSheet = document.getElementById('tracksSheet');
-    const subtitleOptions = document.getElementById('subtitleOptions');
-    const audioOptions = document.getElementById('audioOptions');
-    const openInSheet = document.getElementById('openInSheet');
-    const subStyleSheet = document.getElementById('subStyleSheet');
-
-    const toastStack = document.getElementById('toastStack');
-    const copyrightYear = document.getElementById('copyrightYear');
-
-    // ═══════════════════════════════════════════
-    // UTILITIES
-    // ═══════════════════════════════════════════
-    const formatTime = (secs) => {
-        if (isNaN(secs) || secs < 0) secs = 0;
-        secs = Math.round(secs);
-        const h = Math.floor(secs / 3600);
-        const m = Math.floor((secs % 3600) / 60);
-        const s = secs % 60;
-        return h > 0
-            ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-            : `${m}:${s.toString().padStart(2, '0')}`;
-    };
-
-    const toast = (message) => {
-        if (!toastStack) return;
-        const el = document.createElement('div');
-        el.className = 'toast';
-        el.dir = 'auto';
-        el.textContent = message;
-        toastStack.appendChild(el);
-        setTimeout(() => el.remove(), 2600);
-    };
-
-    // The `hidden` IDL property doesn't reliably reflect to the attribute on
-    // SVG elements in every browser, so toggle the attribute directly -
-    // that works for every element type.
-    const setHidden = (el, hide) => {
-        if (!el) return;
-        el.toggleAttribute('hidden', hide);
-    };
-
-    // ═══════════════════════════════════════════
-    // LANGUAGE — the viewer's saved choice, else the browser's language,
-    // else English. Translations live in i18n.js; a missing key falls back
-    // to English. The picker sits in the file-info row above the player.
-    // ═══════════════════════════════════════════
+    const CFG = window.__CINEMA_CONFIG__ || {};
     const I18N = window.__TJ_I18N__ || { rtl: [], langs: {} };
-    const LANGS = I18N.langs;
+    const $ = (id) => document.getElementById(id);
+    const store = {
+        get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+        set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } },
+    };
+
+    // ------------------------------------------------------------ i18n
     const LANG_KEY = 'tj_lang';
     const pickLang = () => {
-        try {
-            const saved = localStorage.getItem(LANG_KEY);
-            if (saved && LANGS[saved]) return saved;
-        } catch { /* ignore */ }
+        let saved = null;
+        try { saved = localStorage.getItem(LANG_KEY); } catch { /* ignore */ }
+        if (saved && I18N.langs[saved]) return saved;
         for (const l of navigator.languages || [navigator.language || 'en']) {
-            let base = String(l).toLowerCase().split('-')[0];
-            if (base === 'iw') base = 'he';
-            if (LANGS[base]) return base;
+            const code = String(l).toLowerCase().split('-')[0];
+            if (code === 'iw' && I18N.langs.he) return 'he';
+            if (I18N.langs[code]) return code;
         }
         return 'en';
     };
     let lang = pickLang();
-    const isRtl = () => I18N.rtl.includes(lang);
-    const t = (key, vars) => {
-        const v = LANGS[lang]?.[key] ?? LANGS.en?.[key] ?? key;
-        return vars ? v.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '') : v;
-    };
     const langListeners = [];
-
+    const t = (key, vars) => {
+        let s = (I18N.langs[lang] || {})[key] ?? (I18N.langs.en || {})[key] ?? key;
+        if (vars) Object.entries(vars).forEach(([k, v]) => { s = s.replace(`{${k}}`, v); });
+        return s;
+    };
     const applyLang = () => {
         document.documentElement.lang = lang;
-        document.querySelectorAll('[data-i18n]').forEach((el) => {
-            el.textContent = t(el.dataset.i18n);
-            el.dir = 'auto';
-        });
-        document.querySelectorAll('[data-i18n-aria]').forEach((el) => el.setAttribute('aria-label', t(el.dataset.i18nAria)));
-        document.querySelectorAll('.sheet, .pip-placeholder').forEach((el) => {
-            if (isRtl()) el.dir = 'rtl'; else el.removeAttribute('dir');
-        });
-        langListeners.forEach((fn) => { try { fn(); } catch { /* ignore */ } });
+        document.documentElement.dir = I18N.rtl.includes(lang) ? 'rtl' : 'ltr';
+        document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
+        document.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+        langListeners.forEach((fn) => fn());
     };
-
-    const langSelect = document.getElementById('langSelect');
+    const langSelect = $('langSelect');
     if (langSelect) {
-        Object.entries(LANGS).forEach(([code, strings]) => {
-            const opt = document.createElement('option');
-            opt.value = code;
-            opt.textContent = strings._name || code;
-            langSelect.appendChild(opt);
+        Object.entries(I18N.langs).forEach(([code, dict]) => {
+            const o = document.createElement('option');
+            o.value = code; o.textContent = dict._name || code;
+            langSelect.appendChild(o);
         });
         langSelect.value = lang;
         langSelect.addEventListener('change', () => {
-            if (!LANGS[langSelect.value]) return;
             lang = langSelect.value;
             try { localStorage.setItem(LANG_KEY, lang); } catch { /* ignore */ }
             applyLang();
@@ -158,1072 +57,694 @@
     }
     applyLang();
 
-    if (copyrightYear) copyrightYear.textContent = new Date().getFullYear();
+    // ------------------------------------------------------------ helpers
+    const fmt = (s) => {
+        if (!Number.isFinite(s) || s < 0) s = 0;
+        s = Math.floor(s);
+        const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+        const mm = h ? String(m).padStart(2, '0') : String(m);
+        return `${h ? `${h}:` : ''}${mm}:${String(sec).padStart(2, '0')}`;
+    };
+    let pageToastTimer;
+    const pageToast = (msg) => {
+        const el = $('pageToast');
+        if (!el) return;
+        el.textContent = msg; el.hidden = false;
+        clearTimeout(pageToastTimer);
+        pageToastTimer = setTimeout(() => { el.hidden = true; }, 2200);
+    };
+    const ua = navigator.userAgent;
+    const OS = /android/i.test(ua) ? 'android'
+        : (/iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) ? 'ios'
+            : 'desktop';
 
-    // ═══════════════════════════════════════════
-    // AUX URL HELPERS (tracks / subtitle extraction)
-    // ═══════════════════════════════════════════
-    const deriveAuxUrl = (prefix) => {
-        if (!VIDEO_SRC) return null;
+    // ------------------------------------------------------------ page actions
+    const copyBtn = $('copyBtn');
+    copyBtn?.addEventListener('click', async () => {
+        const link = copyBtn.dataset.link || location.href;
         try {
-            const url = new URL(VIDEO_SRC, window.location.href);
-            url.search = '';
-            url.pathname = `/${prefix}${url.pathname}`;
-            return url;
+            await navigator.clipboard.writeText(link);
+            pageToast(t('linkCopied'));
         } catch {
-            return null;
-        }
-    };
-
-    // ═══════════════════════════════════════════
-    // SHEETS (speed / sleep / tracks / open-in)
-    // ═══════════════════════════════════════════
-    const allSheets = [speedSheet, sleepSheet, tracksSheet, openInSheet, subStyleSheet].filter(Boolean);
-
-    const closeSheets = () => {
-        allSheets.forEach((s) => setHidden(s, true));
-        setHidden(sheetBackdrop, true);
-    };
-
-    const openSheet = (sheet) => {
-        closeSheets();
-        if (!sheet) return;
-        setHidden(sheet, false);
-        setHidden(sheetBackdrop, false);
-    };
-
-    sheetBackdrop?.addEventListener('click', closeSheets);
-    document.querySelectorAll('.sheet-close').forEach((b) => b.addEventListener('click', closeSheets));
-
-    // ═══════════════════════════════════════════
-    // PLAYER WIRING — #player is a plain <video>
-    // element; everything here is the standard
-    // HTMLMediaElement / TextTrack API. (An earlier
-    // version routed this through the vidstack engine
-    // purely to obtain this same native element, but
-    // vidstack's own state proxy and manually-appended
-    // <track> children didn't survive its internal
-    // re-renders reliably, so it's cut out entirely.)
-    // ═══════════════════════════════════════════
-    pageCopyBtn?.addEventListener('click', async () => {
-        try {
-            await navigator.clipboard.writeText(window.location.href);
-            toast(t('linkCopied'));
-        } catch {
-            toast(t('copyFailed'));
+            const ta = document.createElement('textarea');
+            ta.value = link; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            const ok = document.execCommand('copy');
+            ta.remove();
+            pageToast(ok ? t('linkCopied') : t('copyFailed'));
         }
     });
+    const shareBtn = $('shareBtn');
+    if (shareBtn && navigator.share) {
+        shareBtn.hidden = false;
+        shareBtn.addEventListener('click', () => {
+            navigator.share({ title: CFG.fileName || document.title, url: location.href }).catch(() => {});
+        });
+    }
+    const openInBtn = $('openInBtn');
+    const openInPanel = $('openInPanel');
+    if (openInPanel) {
+        // Show this device's group first; keep the others for the rare cross-case.
+        const mine = openInPanel.querySelector(`[data-os="${OS}"]`);
+        if (mine) openInPanel.prepend(mine);
+        if (OS !== 'desktop') openInPanel.querySelector('[data-os="desktop"]')?.remove();
+        if (OS === 'android') openInPanel.querySelector('[data-os="ios"]')?.remove();
+        if (OS === 'ios') openInPanel.querySelector('[data-os="android"]')?.remove();
+    }
+    const toggleOpenIn = (force) => {
+        if (!openInPanel) return;
+        const show = force ?? openInPanel.hidden;
+        openInPanel.hidden = !show;
+        openInBtn?.setAttribute('aria-expanded', String(show));
+        if (show) openInPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+    openInBtn?.addEventListener('click', () => toggleOpenIn());
 
-    // Image and non-media pages have no player; everything below is the player.
-    if (!player) return;
+    // ------------------------------------------------------------ player
+    const stage = $('playerStage');
+    const el = $('player');
+    if (!stage || !el) return;
 
+    const ui = {
+        controls: $('controls'), gesture: $('gestureLayer'), play: $('playBtn'),
+        back: $('backBtn'), fwd: $('fwdBtn'), cur: $('curTime'), dur: $('durTime'),
+        timeline: $('timeline'), fill: $('tlFill'), buf: $('tlBuf'), knob: $('tlKnob'), tip: $('tlTip'),
+        mute: $('muteBtn'), vol: $('volRange'), speedBtn: $('speedBtn'), speedLabel: $('speedLabel'),
+        pip: $('pipBtn'), fs: $('fsBtn'), exitFs: $('exitFsBtn'), tracks: $('tracksBtn'), settings: $('settingsBtn'),
+        subDot: $('subDot'), subs: $('subOverlay'), boost: $('boostBadge'), boostLabel: $('boostLabel'),
+        rippleBack: $('rippleBack'), rippleFwd: $('rippleFwd'), toast: $('toast'), scrim: $('scrim'),
+        pipCover: $('pipCover'), err: $('errorBox'),
+    };
+
+    let toastTimer;
+    const toast = (msg) => {
+        ui.toast.textContent = msg; ui.toast.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { ui.toast.hidden = true; }, 2000);
+    };
+
+    // --- state
     let duration = 0;
-    let userSeeking = false;
-    const video = player;
-
-    const setPlayButtonState = () => {
-        const showSpinner = video.readyState < 3 && !video.paused && !video.ended;
-        const showPause = !video.paused && !showSpinner && !video.ended;
-        setHidden(iconPlay, showPause || showSpinner);
-        setHidden(iconPause, !showPause);
-        setHidden(iconSpinner, !showSpinner);
+    let loading = true;
+    let scrubbing = false;
+    const setState = () => {
+        stage.dataset.state = loading ? 'loading' : 'ready';
+        stage.classList.toggle('is-playing', !el.paused);
+        ui.play.setAttribute('aria-label', el.paused ? 'Play' : 'Pause');
     };
+    const setLoading = (on) => { loading = on; setState(); };
 
-    const togglePlay = () => {
+    const play = () => { const p = el.play?.(); if (p?.catch) p.catch(() => {}); };
+    const togglePlay = () => { if (el.paused) play(); else el.pause(); };
+    const seekTo = (s) => {
+        if (!duration) return;
+        el.currentTime = Math.max(0, Math.min(duration - 0.25, s));
+        renderTime(el.currentTime);
+    };
+    const seekBy = (d) => seekTo((el.currentTime || 0) + d);
+
+    // --- time + timeline
+    const renderTime = (now) => {
+        const pct = duration ? Math.min(100, (now / duration) * 100) : 0;
+        ui.fill.style.width = `${pct}%`;
+        ui.knob.style.left = `${pct}%`;
+        ui.cur.textContent = fmt(now);
+    };
+    const renderBuffered = () => {
         try {
-            if (video.paused) {
-                video.play()?.catch?.(() => {});
-            } else {
-                video.pause();
-            }
-        } catch {
-            // Ignore.
-        }
+            const b = el.buffered;
+            if (!b || !b.length || !duration) return;
+            const now = el.currentTime;
+            let end = b.end(b.length - 1);
+            for (let i = 0; i < b.length; i++) if (b.start(i) <= now && now <= b.end(i)) end = b.end(i);
+            ui.buf.style.width = `${Math.min(100, (end / duration) * 100)}%`;
+        } catch { /* not ready */ }
+    };
+    const setDuration = (d) => {
+        if (!Number.isFinite(d) || d <= 0) return;
+        duration = d;
+        ui.dur.textContent = fmt(d);
+        const chip = $('metaDuration');
+        if (chip) { chip.querySelector('span').textContent = fmt(d); chip.hidden = false; }
+    };
+    const setResolution = () => {
+        const w = el.videoWidth, h = el.videoHeight;
+        const chip = $('metaResolution');
+        if (!chip || !w || !h) return;
+        const p = Math.min(w, h);
+        const tag = p >= 2100 ? '4K' : p >= 1400 ? '1440p' : p >= 1000 ? '1080p' : p >= 700 ? '720p' : `${p}p`;
+        chip.querySelector('span').textContent = `${tag} · ${w}×${h}`;
+        chip.hidden = false;
     };
 
-    const updateTimeDisplay = () => {
-        duration = video.duration || 0;
-        if (timeDuration) timeDuration.textContent = formatTime(duration);
-        if (metaDuration && duration > 0) {
-            const span = metaDuration.querySelector('span');
-            span.removeAttribute('data-i18n');
-            span.textContent = formatTime(duration);
-        }
-        if (metaResolution && video.videoWidth) {
-            const span = metaResolution.querySelector('span');
-            span.removeAttribute('data-i18n');
-            span.textContent = `${video.videoWidth}x${video.videoHeight}`;
-        }
-        if (!userSeeking) {
-            if (seekBar && duration > 0) {
-                const pct = Math.min(1000, Math.max(0, (video.currentTime / duration) * 1000));
-                seekBar.value = String(pct);
-                seekBar.style.setProperty('--fill', `${pct / 10}%`);
-            }
-            if (timeCurrent) timeCurrent.textContent = formatTime(video.currentTime || 0);
-        }
+    const tlPos = (clientX) => {
+        const r = ui.timeline.getBoundingClientRect();
+        const f = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+        return { f, x: f * r.width };
     };
-
-    ['play', 'pause', 'waiting', 'playing', 'canplay', 'ended'].forEach((evt) => {
-        video.addEventListener(evt, setPlayButtonState);
+    const showTip = (clientX) => {
+        const { f, x } = tlPos(clientX);
+        ui.tip.textContent = fmt(f * duration);
+        const r = ui.timeline.getBoundingClientRect();
+        const half = ui.tip.offsetWidth / 2;
+        ui.tip.style.left = `${Math.max(half, Math.min(r.width - half, x))}px`;
+        return f;
+    };
+    ui.timeline.addEventListener('pointermove', (e) => { if (duration) showTip(e.clientX); });
+    ui.timeline.addEventListener('pointerdown', (e) => {
+        if (!duration) return;
+        scrubbing = true;
+        ui.timeline.classList.add('dragging');
+        ui.timeline.setPointerCapture(e.pointerId);
+        renderTime(showTip(e.clientX) * duration);
+        keepControls();
     });
-    video.addEventListener('timeupdate', updateTimeDisplay);
-    video.addEventListener('durationchange', updateTimeDisplay);
-    video.addEventListener('loadedmetadata', updateTimeDisplay);
-    video.addEventListener('volumechange', () => {
-        if (!volumeSlider) return;
-        const pct = video.muted ? 0 : Math.round(video.volume * 100);
-        volumeSlider.value = String(pct);
-        if (volumeIcon) volumeIcon.style.opacity = pct === 0 ? '.5' : '1';
+    ui.timeline.addEventListener('pointermove', (e) => {
+        if (!scrubbing) return;
+        renderTime(showTip(e.clientX) * duration);
     });
-    video.addEventListener('ratechange', () => {
-        const rate = video.playbackRate || 1;
-        const text = rate === 1 ? '1x' : `${rate}x`;
-        if (speedLabel) speedLabel.textContent = text;
-        if (topSpeedLabel) topSpeedLabel.textContent = text;
+    const endScrub = (e) => {
+        if (!scrubbing) return;
+        scrubbing = false;
+        ui.timeline.classList.remove('dragging');
+        seekTo(tlPos(e.clientX).f * duration);
+        scheduleHide();
+    };
+    ui.timeline.addEventListener('pointerup', endScrub);
+    ui.timeline.addEventListener('pointercancel', endScrub);
+
+    // --- controls visibility
+    let hideTimer;
+    const sheetOpen = () => !!stage.querySelector('.sheet:not([hidden])');
+    const showControls = () => { stage.classList.add('controls-on'); scheduleHide(); };
+    const hideControls = () => {
+        if (el.paused || scrubbing || sheetOpen()) return;
+        stage.classList.remove('controls-on');
+    };
+    const scheduleHide = () => { clearTimeout(hideTimer); hideTimer = setTimeout(hideControls, 3200); };
+    const keepControls = () => { stage.classList.add('controls-on'); clearTimeout(hideTimer); };
+    stage.classList.add('controls-on');
+    ui.controls.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') showControls(); });
+    ui.controls.addEventListener('click', () => scheduleHide());
+
+    // --- buttons
+    ui.play.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); scheduleHide(); });
+    ui.back.addEventListener('click', () => { seekBy(-10); flash(ui.rippleBack); });
+    ui.fwd.addEventListener('click', () => { seekBy(10); flash(ui.rippleFwd); });
+
+    ui.mute?.addEventListener('click', () => { el.muted = !el.muted; });
+    ui.vol?.addEventListener('input', () => {
+        el.volume = Number(ui.vol.value);
+        if (el.muted && el.volume > 0) el.muted = false;
     });
-    video.addEventListener('error', () => {
-        setHidden(bgMessage, false);
-    });
-
-    if (!video.getAttribute('src')) video.src = VIDEO_SRC;
-    setPlayButtonState();
-    updateTimeDisplay();
-
-    // ═══════════════════════════════════════════
-    // FULLSCREEN
-    // ═══════════════════════════════════════════
-    // The page shows a compact player; "expanded" is the full app-style
-    // layout. It uses the real Fullscreen API where the browser allows it
-    // on an element, and otherwise (iPhone Safari, some in-app browsers)
-    // falls back to a fixed full-viewport overlay.
-    const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
-    const isExpanded = () => stage?.hasAttribute('data-expanded');
-
-    const setExpanded = (on, pseudo) => {
-        stage?.toggleAttribute('data-expanded', on);
-        stage?.toggleAttribute('data-pseudo-fs', on && pseudo);
-        document.body.classList.toggle('player-pseudo-fs', on && pseudo);
-        setHidden(iconFsEnter, on);
-        setHidden(iconFsExit, !on);
-        closeSheets();
-        showControls();
+    const renderVolume = () => {
+        stage.classList.toggle('is-muted', !!el.muted || el.volume === 0);
+        if (ui.vol) ui.vol.value = el.muted ? 0 : el.volume;
     };
 
-    const lockLandscape = () => {
-        if (video.videoWidth && video.videoWidth < video.videoHeight) return;
-        try { screen.orientation?.lock?.('landscape')?.catch?.(() => {}); } catch { /* ignore */ }
+    // --- fullscreen
+    const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+    const isFs = () => stage.classList.contains('is-fs');
+    const setFsClass = (on) => {
+        stage.classList.toggle('is-fs', on);
+        document.body.style.overflow = on ? 'hidden' : '';
     };
-
-    const toggleFullscreen = () => {
-        if (isExpanded()) {
-            if (fsElement()) {
-                (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {});
-            } else {
-                setExpanded(false, false);
-            }
-            try { screen.orientation?.unlock?.(); } catch { /* ignore */ }
-            return;
+    const enterFs = async () => {
+        const req = stage.requestFullscreen || stage.webkitRequestFullscreen;
+        if (req) {
+            try {
+                await req.call(stage, { navigationUI: 'hide' });
+                if (CFG.isVideo) screen.orientation?.lock?.('landscape').catch(() => {});
+                return;
+            } catch { /* fall through to the in-page version */ }
         }
-        const request = stage?.requestFullscreen || stage?.webkitRequestFullscreen;
-        if (!request) {
-            setExpanded(true, true);
-            return;
-        }
-        try {
-            const result = request.call(stage);
-            if (result && typeof result.then === 'function') {
-                result.then(lockLandscape).catch(() => setExpanded(true, true));
-            } else {
-                lockLandscape();
-            }
-        } catch {
-            setExpanded(true, true);
-        }
+        setFsClass(true);
+        history.pushState({ tjFs: 1 }, '');
     };
-
-    const onFullscreenChange = () => {
-        const fs = fsElement() === stage;
-        if (fs !== isExpanded() || stage?.hasAttribute('data-pseudo-fs')) setExpanded(fs, false);
+    const exitFs = () => {
+        if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        else if (isFs()) { setFsClass(false); if (history.state?.tjFs) history.back(); }
     };
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    const toggleFs = () => (isFs() ? exitFs() : enterFs());
+    const onFsChange = () => {
+        const on = fsEl() === stage;
+        setFsClass(on);
+        if (!on) screen.orientation?.unlock?.();
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
+    window.addEventListener('popstate', () => { if (isFs() && !fsEl()) setFsClass(false); });
+    ui.fs.addEventListener('click', toggleFs);
+    ui.exitFs.addEventListener('click', exitFs);
 
-    fullscreenBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleFullscreen();
+    // --- picture in picture (movi uses Document PiP)
+    if (!('documentPictureInPicture' in window) || CFG.isAudio) ui.pip.hidden = true;
+    ui.pip.addEventListener('click', () => {
+        el.requestPictureInPicture?.().catch(() => toast(t('pipUnsupported')));
+    });
+    $('pipReturnBtn')?.addEventListener('click', () => {
+        try { window.documentPictureInPicture?.window?.close(); } catch { /* ignore */ }
     });
 
-    // ═══════════════════════════════════════════
-    // CONTROLS VISIBILITY (auto-hide)
-    // ═══════════════════════════════════════════
-    let hideTimer = null;
-    const showControls = () => {
-        stage?.removeAttribute('data-hidden');
-        clearTimeout(hideTimer);
-        hideTimer = setTimeout(() => {
-            if (video && !video.paused) stage?.setAttribute('data-hidden', '');
-        }, 3200);
+    // --- gestures (tap / double-tap / long-press)
+    const flash = (node) => {
+        node.classList.add('show');
+        clearTimeout(node._t);
+        node._t = setTimeout(() => node.classList.remove('show'), 450);
     };
-
-    const hideControlsNow = () => {
-        stage?.setAttribute('data-hidden', '');
-        clearTimeout(hideTimer);
-    };
-
-    // ═══════════════════════════════════════════
-    // VIDEO GESTURES (on the tap layer)
-    //   tap               show / hide the controls (never pauses)
-    //   double-tap sides  -10s / +10s, further taps keep adding
-    //   double-tap middle play / pause
-    //   long-press        left half 1.5x, right half 2x, while held
-    // ═══════════════════════════════════════════
-    const boostBadge = document.getElementById('boostBadge');
-    const boostLabel = document.getElementById('boostLabel');
-    const DOUBLE_TAP_MS = 280;
-    const LONG_PRESS_MS = 450;
-
-    let press = null;
+    let tapTimer = null;
+    let lastTap = { time: 0, zone: '' };
     let pressTimer = null;
     let boosting = false;
-    let rateBeforeBoost = 1;
-    let lastTap = null;
-    let singleTapTimer = null;
-    let seekChain = null;
-
-    const tapZone = (x) => {
+    let boostPrevRate = 1;
+    let downAt = null;
+    const zoneOf = (x) => {
         const r = stage.getBoundingClientRect();
         const f = (x - r.left) / r.width;
-        return f < 1 / 3 ? 'left' : f > 2 / 3 ? 'right' : 'center';
+        const rtlFlip = false; // seek zones follow the picture, not the text direction
+        if (f < 0.35) return rtlFlip ? 'fwd' : 'back';
+        if (f > 0.65) return rtlFlip ? 'back' : 'fwd';
+        return 'mid';
     };
-
-    const sideFlash = (zone) => {
-        if (!stage) return;
-        stage.querySelectorAll(`.side-seek.${zone}`).forEach((el) => el.remove());
-        const el = document.createElement('div');
-        el.className = `side-seek ${zone}`;
-        const label = document.createElement('span');
-        label.textContent = zone === 'left' ? '« 10s' : '10s »';
-        el.appendChild(label);
-        stage.appendChild(el);
-        setTimeout(() => el.remove(), 650);
-    };
-
     const startBoost = (rate) => {
         boosting = true;
-        rateBeforeBoost = video.playbackRate || 1;
-        video.playbackRate = rate;
-        if (boostLabel) boostLabel.textContent = `${rate}x`;
-        setHidden(boostBadge, false);
-        if (video.paused) video.play()?.catch?.(() => {});
-        hideControlsNow();
+        boostPrevRate = el.playbackRate || 1;
+        el.playbackRate = rate;
+        ui.boostLabel.textContent = `${rate}x`;
+        ui.boost.hidden = false;
+        if (el.paused) play();
     };
-
     const stopBoost = () => {
         if (!boosting) return;
         boosting = false;
-        video.playbackRate = rateBeforeBoost;
-        setHidden(boostBadge, true);
+        el.playbackRate = boostPrevRate;
+        ui.boost.hidden = true;
     };
 
-    const handleTap = (x) => {
-        const now = performance.now();
-        const zone = tapZone(x);
-        if (seekChain && now < seekChain.until && zone === seekChain.zone) {
-            seekChain.until = now + 600;
-            seekBy(zone === 'left' ? -10 : 10);
-            sideFlash(zone);
-            return;
-        }
-        if (lastTap && now - lastTap.t < DOUBLE_TAP_MS && zone === lastTap.zone) {
-            clearTimeout(singleTapTimer);
-            lastTap = null;
-            if (zone === 'center') {
-                togglePlay();
-                showControls();
-            } else {
-                seekBy(zone === 'left' ? -10 : 10);
-                sideFlash(zone);
-                seekChain = { zone, until: now + 600 };
-            }
-            return;
-        }
-        seekChain = null;
-        lastTap = { t: now, zone };
-        clearTimeout(singleTapTimer);
-        singleTapTimer = setTimeout(() => {
-            lastTap = null;
-            if (stage?.hasAttribute('data-hidden')) showControls();
-            else hideControlsNow();
-        }, DOUBLE_TAP_MS);
-    };
-
-    tapLayer?.addEventListener('pointerdown', (e) => {
-        if (e.pointerType === 'mouse' && e.button !== 0) return;
-        press = { x: e.clientX, y: e.clientY };
-        clearTimeout(pressTimer);
-        pressTimer = setTimeout(() => {
-            const r = stage.getBoundingClientRect();
-            startBoost(e.clientX < r.left + r.width / 2 ? 1.5 : 2);
-        }, LONG_PRESS_MS);
-    });
-
-    tapLayer?.addEventListener('pointermove', (e) => {
-        if (!press || boosting) return;
-        if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > 12) {
+    ui.gesture.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        downAt = { x: e.clientX, y: e.clientY, type: e.pointerType };
+        if (e.pointerType !== 'mouse') {
             clearTimeout(pressTimer);
-            press = null;
+            const half = (e.clientX - stage.getBoundingClientRect().left) / stage.clientWidth;
+            pressTimer = setTimeout(() => { pressTimer = null; startBoost(half < 0.5 ? 1.5 : 2); }, 450);
         }
     });
+    ui.gesture.addEventListener('pointermove', (e) => {
+        if (e.pointerType === 'mouse') { showControls(); return; }
+        if (downAt && pressTimer && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 12) {
+            clearTimeout(pressTimer); pressTimer = null;
+        }
+    });
+    ui.gesture.addEventListener('pointercancel', () => { clearTimeout(pressTimer); pressTimer = null; stopBoost(); downAt = null; });
+    ui.gesture.addEventListener('pointerup', (e) => {
+        if (!downAt) return;
+        const wasPress = boosting;
+        clearTimeout(pressTimer); pressTimer = null;
+        stopBoost();
+        downAt = null;
+        if (wasPress) return;
 
-    tapLayer?.addEventListener('pointerup', (e) => {
-        clearTimeout(pressTimer);
-        if (boosting) {
-            stopBoost();
-            press = null;
+        if (e.pointerType === 'mouse') {
+            // Desktop: click = play/pause, double-click = fullscreen.
+            const now = Date.now();
+            if (now - lastTap.time < 300) { clearTimeout(tapTimer); lastTap.time = 0; toggleFs(); return; }
+            lastTap.time = now;
+            clearTimeout(tapTimer);
+            tapTimer = setTimeout(() => { togglePlay(); showControls(); }, 220);
             return;
         }
-        if (!press) return;
-        press = null;
-        handleTap(e.clientX);
-    });
 
-    ['pointercancel', 'pointerleave'].forEach((evt) => tapLayer?.addEventListener(evt, () => {
-        clearTimeout(pressTimer);
-        press = null;
-        stopBoost();
-    }));
-
-    stage?.addEventListener('contextmenu', (e) => e.preventDefault());
-
-    showControls();
-
-    // ═══════════════════════════════════════════
-    // TOP BAR
-    // ═══════════════════════════════════════════
-    backBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (isExpanded()) toggleFullscreen();
-    });
-
-    shareBtn?.addEventListener('click', async () => {
-        const shareData = { title: FILE_NAME, url: window.location.href };
-        try {
-            if (navigator.share) {
-                await navigator.share(shareData);
-                return;
-            }
-        } catch {
-            // Fall through to clipboard.
+        // Touch: tap = show/hide controls, double-tap a side = ±10s (keeps stacking).
+        const zone = zoneOf(e.clientX);
+        const now = Date.now();
+        const isDouble = now - lastTap.time < 320 && zone === lastTap.zone && zone !== 'mid';
+        const chaining = now - lastTap.time < 700 && lastTap.chain && zone === lastTap.zone;
+        if ((isDouble || chaining) && zone !== 'mid') {
+            clearTimeout(tapTimer);
+            seekBy(zone === 'back' ? -10 : 10);
+            flash(zone === 'back' ? ui.rippleBack : ui.rippleFwd);
+            lastTap = { time: now, zone, chain: true };
+            return;
         }
-        try {
-            await navigator.clipboard.writeText(window.location.href);
-            toast(t('linkCopied'));
-        } catch {
-            toast(t('copyFailed'));
-        }
+        lastTap = { time: now, zone, chain: false };
+        clearTimeout(tapTimer);
+        tapTimer = setTimeout(() => {
+            if (stage.classList.contains('controls-on')) { stage.classList.remove('controls-on'); clearTimeout(hideTimer); }
+            else showControls();
+        }, zone === 'mid' ? 0 : 260);
+    });
+    ui.gesture.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // --- keyboard
+    document.addEventListener('keydown', (e) => {
+        if (e.target.closest('input, select, textarea') || e.ctrlKey || e.metaKey || e.altKey) return;
+        const k = e.key.toLowerCase();
+        const handled = {
+            ' ': togglePlay, k: togglePlay, f: toggleFs, m: () => { el.muted = !el.muted; },
+            arrowleft: () => seekBy(-5), arrowright: () => seekBy(5), j: () => seekBy(-10), l: () => seekBy(10),
+            arrowup: () => { el.volume = Math.min(1, (el.volume || 0) + 0.1); },
+            arrowdown: () => { el.volume = Math.max(0, (el.volume || 0) - 0.1); },
+            escape: () => { if (sheetOpen()) closeSheets(); else if (isFs() && !fsEl()) exitFs(); },
+        }[k];
+        if (!handled) return;
+        e.preventDefault();
+        handled();
+        showControls();
     });
 
-    // ═══════════════════════════════════════════
-    // FLOATING WINDOW (picture-in-picture)
-    // Where the browser has Document Picture-in-Picture (desktop Chrome /
-    // Edge), the whole player moves into the floating window - controls and
-    // our subtitles included. Otherwise it's the plain video PiP, where the
-    // browser draws only the picture (Chrome on Android shows no subtitles
-    // there, and offers no way for a page to add any).
-    // While floating, the video's place on the page says so and offers a
-    // button to bring it back.
-    // ═══════════════════════════════════════════
-    const screenEl = stage?.parentElement;
-    const pipPlaceholder = document.getElementById('pipPlaceholder');
-    let docPipWindow = null;
-
-    const setPipShown = (on) => {
-        screenEl?.toggleAttribute('data-pip', on);
-        setHidden(pipPlaceholder, !on);
+    // ------------------------------------------------------------ sheets
+    const sheets = [...stage.querySelectorAll('.sheet')];
+    const closeSheets = () => {
+        sheets.forEach((s) => { s.hidden = true; s.style.transform = ''; });
+        ui.scrim.hidden = true;
+        scheduleHide();
     };
-
-    const openDocumentPip = async () => {
-        const pipWin = await window.documentPictureInPicture.requestWindow({
-            width: Math.max(320, Math.round(stage.clientWidth)),
-            height: Math.max(180, Math.round(stage.clientHeight)),
+    const openSheet = (id) => {
+        sheets.forEach((s) => { s.hidden = s.id !== id; s.style.transform = ''; });
+        ui.scrim.hidden = false;
+        keepControls();
+    };
+    ui.scrim.addEventListener('click', closeSheets);
+    stage.querySelectorAll('.sheet-x').forEach((b) => b.addEventListener('click', closeSheets));
+    // Drag the handle/header down to dismiss.
+    sheets.forEach((sheet) => {
+        const grips = sheet.querySelectorAll('.grab, .sheet-head');
+        let startY = null;
+        grips.forEach((g) => {
+            g.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('button')) return;
+                startY = e.clientY; g.setPointerCapture(e.pointerId); sheet.style.transition = 'none';
+            });
+            g.addEventListener('pointermove', (e) => {
+                if (startY == null) return;
+                sheet.style.transform = `translateY(${Math.max(0, e.clientY - startY)}px)`;
+            });
+            const end = (e) => {
+                if (startY == null) return;
+                const dy = e.clientY - startY;
+                startY = null; sheet.style.transition = '';
+                if (dy > 70) closeSheets(); else sheet.style.transform = '';
+            };
+            g.addEventListener('pointerup', end);
+            g.addEventListener('pointercancel', end);
         });
-        docPipWindow = pipWin;
-        document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
-            pipWin.document.head.appendChild(node.cloneNode(true));
-        });
-        pipWin.document.documentElement.classList.add('pip-doc');
-        stage.setAttribute('data-docpip', '');
-        pipWin.document.body.appendChild(stage);
-        setPipShown(true);
-        pipWin.addEventListener('pagehide', () => {
-            stage.removeAttribute('data-docpip');
-            screenEl?.insertBefore(stage, pipPlaceholder);
-            docPipWindow = null;
-            setPipShown(false);
-            positionSubs();
-        }, { once: true });
-        positionSubs();
-    };
-
-    const enterPip = async () => {
-        if (isExpanded()) toggleFullscreen();
-        try {
-            if ('documentPictureInPicture' in window && stage && screenEl) {
-                await openDocumentPip();
-            } else if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
-                await video.requestPictureInPicture();
-            } else {
-                toast(t('pipUnsupported'));
-            }
-        } catch {
-            toast(t('pipUnsupported'));
-        }
-    };
-
-    const exitPip = async () => {
-        try {
-            if (docPipWindow) docPipWindow.close();
-            else if (document.pictureInPictureElement) await document.exitPictureInPicture();
-        } catch { /* ignore */ }
-    };
-
-    pipBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (docPipWindow || document.pictureInPictureElement) exitPip();
-        else enterPip();
     });
-    document.getElementById('pipReturnBtn')?.addEventListener('click', exitPip);
-    video.addEventListener('enterpictureinpicture', () => setPipShown(true));
-    video.addEventListener('leavepictureinpicture', () => setPipShown(false));
-
-    // ═══════════════════════════════════════════
-    // CENTER CONTROLS
-    // ═══════════════════════════════════════════
-    playBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        togglePlay();
-        showControls();
+    ui.tracks.addEventListener('click', () => { renderTracks(); openSheet('tracksSheet'); });
+    ui.settings.addEventListener('click', () => { renderSettings(); openSheet('settingsSheet'); });
+    ui.speedBtn.addEventListener('click', () => { renderSettings(); openSheet('settingsSheet'); });
+    $('subStyleBtn').addEventListener('click', () => { reflectSubPrefs(); openSheet('subStyleSheet'); });
+    $('errorOpenIn')?.addEventListener('click', () => {
+        toggleOpenIn(true);
     });
 
-    const flashSeek = (btn, delta) => {
-        if (!btn) return;
-        btn.classList.remove('seek-pulse');
-        // Force reflow so re-adding the class restarts the animation on a
-        // quick double-tap instead of being a no-op.
-        void btn.offsetWidth;
-        btn.classList.add('seek-pulse');
-        const flash = document.createElement('span');
-        flash.className = 'seek-flash';
-        flash.textContent = delta > 0 ? `+${delta}` : `${delta}`;
-        btn.appendChild(flash);
-        setTimeout(() => flash.remove(), 650);
-        setTimeout(() => btn.classList.remove('seek-pulse'), 650);
+    const chip = (label, on, onClick) => {
+        const b = document.createElement('button');
+        b.className = `chip-btn${on ? ' on' : ''}`;
+        b.textContent = label;
+        b.addEventListener('click', onClick);
+        return b;
     };
 
-    const seekBy = (delta) => {
-        if (video) {
-            video.currentTime = Math.min(duration || Infinity, Math.max(0, (video.currentTime || 0) + delta));
-        }
-        showControls();
-    };
-
-    seekBackBtn?.addEventListener('click', (e) => { e.stopPropagation(); flashSeek(seekBackBtn, -10); seekBy(-10); });
-    seekFwdBtn?.addEventListener('click', (e) => { e.stopPropagation(); flashSeek(seekFwdBtn, 10); seekBy(10); });
-
-    // ═══════════════════════════════════════════
-    // SEEK BAR
-    // ═══════════════════════════════════════════
-    seekBar?.addEventListener('input', () => {
-        userSeeking = true;
-        const pct = Number(seekBar.value) / 1000;
-        seekBar.style.setProperty('--fill', `${pct * 100}%`);
-        if (timeCurrent && duration > 0) timeCurrent.textContent = formatTime(pct * duration);
-        showControls();
-    });
-
-    seekBar?.addEventListener('change', () => {
-        if (video && duration > 0) {
-            video.currentTime = (Number(seekBar.value) / 1000) * duration;
-        }
-        userSeeking = false;
-    });
-
-    // ═══════════════════════════════════════════
-    // SIDE SLIDERS: brightness / volume
-    // Hidden at rest (only the icon shows); the track + thumb reveal
-    // while the slider is actually being dragged, then fade back out
-    // shortly after release.
-    // ═══════════════════════════════════════════
-    const wireSliderReveal = (wrap, range) => {
-        if (!wrap || !range) return;
-        let hideTimer = null;
-        const reveal = () => {
-            wrap.classList.add('active');
-            clearTimeout(hideTimer);
-        };
-        const scheduleHide = () => {
-            clearTimeout(hideTimer);
-            hideTimer = setTimeout(() => wrap.classList.remove('active'), 700);
-        };
-        range.addEventListener('pointerdown', reveal);
-        range.addEventListener('input', reveal);
-        range.addEventListener('pointerup', scheduleHide);
-        range.addEventListener('change', scheduleHide);
-    };
-    wireSliderReveal(brightnessWrap, brightnessSlider);
-    wireSliderReveal(volumeWrap, volumeSlider);
-
-    brightnessSlider?.addEventListener('input', () => {
-        if (video) video.style.filter = `brightness(${brightnessSlider.value}%)`;
-        showControls();
-    });
-
-    volumeSlider?.addEventListener('input', () => {
-        const val = Number(volumeSlider.value);
-        if (video) {
-            video.volume = val / 100;
-            video.muted = val === 0;
-        }
-        if (volumeIcon) volumeIcon.style.opacity = val === 0 ? '.5' : '1';
-        showControls();
-    });
-
-    // ═══════════════════════════════════════════
-    // SPEED SHEET
-    // ═══════════════════════════════════════════
+    // --- speed + sleep timer
     const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-
-    const renderSpeedOptions = () => {
-        if (!speedOptions) return;
-        const current = video?.playbackRate || 1;
-        speedOptions.innerHTML = '';
-        SPEEDS.forEach((rate) => {
-            const btn = document.createElement('button');
-            btn.className = 'sheet-option' + (rate === current ? ' selected' : '');
-            btn.textContent = rate === 1 ? t('normalSpeed') : `${rate}x`;
-            btn.addEventListener('click', () => {
-                try { if (video) video.playbackRate = rate; } catch { /* ignore */ }
-                closeSheets();
-            });
-            speedOptions.appendChild(btn);
-        });
+    let sleepMinutes = 0;
+    let sleepTimer = null;
+    const sleepLabel = (m) => (m ? t('minutes', { n: m }) : t('timerOff'));
+    const renderSettings = () => {
+        const sp = $('speedOptions');
+        sp.replaceChildren(...SPEEDS.map((r) => chip(r === 1 ? t('normalSpeed') : `${r}x`,
+            Math.abs((boosting ? boostPrevRate : el.playbackRate) - r) < 0.01,
+            () => { el.playbackRate = r; renderSettings(); })));
+        const sl = $('sleepOptions');
+        sl.replaceChildren(...[0, 15, 30, 45, 60, 90].map((m) => chip(sleepLabel(m), m === sleepMinutes, () => {
+            sleepMinutes = m;
+            clearTimeout(sleepTimer);
+            if (m) {
+                sleepTimer = setTimeout(() => { el.pause(); sleepMinutes = 0; toast(t('sleepPaused')); }, m * 60000);
+                toast(t('sleepSet', { l: sleepLabel(m) }));
+            } else toast(t('sleepOff'));
+            renderSettings();
+        })));
+    };
+    const renderSpeed = () => {
+        if (boosting) return;
+        const r = el.playbackRate || 1;
+        ui.speedLabel.textContent = `${Number(r.toFixed(2))}x`;
     };
 
-    [speedBtn, topSpeedBtn].forEach((btn) => btn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        renderSpeedOptions();
-        openSheet(speedSheet);
-    }));
-
-    // ═══════════════════════════════════════════
-    // SLEEP TIMER SHEET
-    // ═══════════════════════════════════════════
-    let sleepTimerHandle = null;
-    let sleepTimerMinutes = null;
-
-    const SLEEP_MINUTES = [null, 10, 20, 30, 45, 60];
-    const sleepLabel = (minutes) => (minutes ? t('minutes', { n: minutes }) : t('timerOff'));
-
-    const renderSleepOptions = () => {
-        if (!sleepOptions) return;
-        sleepOptions.innerHTML = '';
-        SLEEP_MINUTES.forEach((minutes) => {
-            const label = sleepLabel(minutes);
-            const btn = document.createElement('button');
-            btn.className = 'sheet-option' + (minutes === sleepTimerMinutes ? ' selected' : '');
-            btn.textContent = label;
-            btn.addEventListener('click', () => {
-                clearTimeout(sleepTimerHandle);
-                sleepTimerMinutes = minutes;
-                if (minutes) {
-                    sleepTimerHandle = setTimeout(() => {
-                        try { video?.pause(); } catch { /* ignore */ }
-                        toast(t('sleepPaused'));
-                    }, minutes * 60 * 1000);
-                    toast(t('sleepSet', { l: label }));
-                } else {
-                    toast(t('sleepOff'));
-                }
-                closeSheets();
-            });
-            sleepOptions.appendChild(btn);
-        });
-    };
-
-    sleepBtn?.addEventListener('click', () => {
-        renderSleepOptions();
-        openSheet(sleepSheet);
-    });
-
-    // ═══════════════════════════════════════════
-    // LOCK
-    // ═══════════════════════════════════════════
-    lockBtn?.addEventListener('click', () => {
-        stage?.setAttribute('data-locked', '');
-        setHidden(unlockBtn, false);
-    });
-
-    unlockBtn?.addEventListener('click', () => {
-        stage?.removeAttribute('data-locked');
-        setHidden(unlockBtn, true);
-        showControls();
-    });
-
-    // ═══════════════════════════════════════════
-    // OPEN IN EXTERNAL PLAYER
-    // ═══════════════════════════════════════════
-    openInBtn?.addEventListener('click', () => openSheet(openInSheet));
-    pageOpenInBtn?.addEventListener('click', () => openSheet(openInSheet));
-
-
-    // ═══════════════════════════════════════════
-    // SUBTITLES
-    // The server extracts embedded subtitles one minute at a time
-    // (GET /subtitle/<file>?track=N&t=<seconds>) using the MKV index, so
-    // the first line shows within seconds instead of after the whole movie
-    // has been read. We keep the windows around the playhead loaded and draw
-    // the lines ourselves: on the actual picture, lifted above the control
-    // bar while it's visible, each line laid out in its own direction so
-    // Hebrew/Arabic punctuation lands on the correct side.
-    // ═══════════════════════════════════════════
-    const subOverlay = document.getElementById('subOverlay');
-    const ovBottom = document.getElementById('ovBottom');
-    const SUB_WINDOW_S = 60;
-
-    let discoveredTracks = [];
-    let subTrack = null;          // selected track number, or null = off
-    let subCues = [];             // [{s, e, t}] ms, sorted by start
-    let subWindows = new Map();   // window index -> 'loading' | 'done' | 'error'
-    let subGeneration = 0;        // bumps on every selection, drops stale responses
-    let subLoadingToastShown = false;
-
-    const languageName = (code) => {
-        if (!code || code === 'und') return null;
+    // ------------------------------------------------------------ tracks
+    const LANG_NAMES = (() => {
+        try { return new Intl.DisplayNames([lang, 'en'], { type: 'language' }); } catch { return null; }
+    })();
+    const ISO3 = { eng: 'en', heb: 'he', ara: 'ar', per: 'fa', fas: 'fa', rus: 'ru', ukr: 'uk', spa: 'es', por: 'pt',
+        fre: 'fr', fra: 'fr', ger: 'de', deu: 'de', ita: 'it', tur: 'tr', ind: 'id', hin: 'hi', chi: 'zh', zho: 'zh',
+        jpn: 'ja', kor: 'ko', dut: 'nl', nld: 'nl', pol: 'pl', swe: 'sv', tha: 'th', vie: 'vi', gre: 'el', ell: 'el' };
+    const langName = (code) => {
+        if (!code || code === 'und') return '';
+        const c = ISO3[code.toLowerCase()] || code;
         try {
-            const name = new Intl.DisplayNames([lang, 'en'], { type: 'language' }).of(code);
-            if (name && name.toLowerCase() !== code.toLowerCase()) return name;
-        } catch { /* fall through */ }
-        return code.toUpperCase();
+            const dn = new Intl.DisplayNames([lang], { type: 'language' });
+            return dn.of(c) || code;
+        } catch { return LANG_NAMES?.of(c) || code; }
+    };
+    const CODEC_NAMES = { subrip: 'SRT', srt: 'SRT', ass: 'ASS', ssa: 'SSA', webvtt: 'VTT', mov_text: 'TX3G',
+        hdmv_pgs_subtitle: 'PGS', dvd_subtitle: 'VobSub', dvb_subtitle: 'DVB', eac3: 'E-AC3', truehd: 'TrueHD' };
+    const CHANNELS = { 1: 'Mono', 2: 'Stereo', 6: '5.1', 8: '7.1' };
+    const trackLabel = (tr, i) => {
+        const name = langName(tr.language);
+        const enName = (() => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(ISO3[(tr.language || '').toLowerCase()] || tr.language); } catch { return ''; } })();
+        const same = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+        const title = tr.label && !same(tr.label, name) && !same(tr.label, enName) ? tr.label : '';
+        const main = name || title || t('track', { n: i + 1 });
+        const codec = CODEC_NAMES[(tr.codec || '').toLowerCase()] || (tr.codec || '').toUpperCase();
+        const extra = [name && title ? title : '', tr.channels ? CHANNELS[tr.channels] || `${tr.channels}ch` : '', codec]
+            .filter(Boolean).join(' · ');
+        return { main, extra };
+    };
+    const CHECK = '<svg class="check" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+    const option = (main, sub, on, onClick) => {
+        const b = document.createElement('button');
+        b.className = `opt${on ? ' on' : ''}`;
+        const box = document.createElement('span');
+        box.className = 'opt-main';
+        const m = document.createElement('span'); m.className = 'opt-title'; m.textContent = main; box.appendChild(m);
+        if (sub) { const s = document.createElement('span'); s.className = 'opt-sub'; s.textContent = sub; box.appendChild(s); }
+        b.appendChild(box);
+        b.insertAdjacentHTML('beforeend', CHECK);
+        b.addEventListener('click', onClick);
+        return b;
+    };
+    const engine = () => el.player || null;
+    let subTrackId = null;
+    const activeAudioId = () => {
+        try { return engine()?.trackManager?.getActiveAudioTrack?.()?.id ?? null; } catch { return null; }
+    };
+    const renderTracks = () => {
+        const p = engine();
+        const audio = p?.getAudioTracks?.() || [];
+        const subs = p?.getSubtitleTracks?.() || [];
+        try { subTrackId = p?.trackManager?.getActiveSubtitleTrack?.()?.id ?? subTrackId; } catch { /* ignore */ }
+
+        const subBox = $('subOptions');
+        if (!subs.length) {
+            const d = document.createElement('div'); d.className = 'opts-empty'; d.textContent = t('noSubs');
+            subBox.replaceChildren(d);
+        } else {
+            subBox.replaceChildren(
+                option(t('off'), '', subTrackId == null, () => selectSub(null)),
+                ...subs.map((s, i) => {
+                    const { main, extra } = trackLabel(s, i);
+                    return option(main, extra, s.id === subTrackId, () => selectSub(s.id));
+                }),
+            );
+        }
+        const audioBox = $('audioOptions');
+        if (audio.length < 2) {
+            const d = document.createElement('div'); d.className = 'opts-empty'; d.textContent = t('oneAudio');
+            audioBox.replaceChildren(d);
+        } else {
+            const act = activeAudioId();
+            audioBox.replaceChildren(...audio.map((a, i) => {
+                const { main, extra } = trackLabel(a, i);
+                return option(main, extra, a.id === act || (act == null && i === 0), () => selectAudio(a.id));
+            }));
+        }
+        ui.subDot.hidden = subTrackId == null;
+    };
+    const selectAudio = (id) => {
+        try { engine()?.selectAudioTrack(id); } catch { /* ignore */ }
+        setTimeout(renderTracks, 80);
+    };
+    const SUB_CHOICE_KEY = 'tj_sub_choice';
+    const selectSub = async (id) => {
+        subTrackId = id;
+        renderTracks();
+        clearSubs();
+        try { await engine()?.selectSubtitleTrack(id); } catch { /* ignore */ }
+        const tr = (engine()?.getSubtitleTracks?.() || []).find((s) => s.id === id);
+        store.set(SUB_CHOICE_KEY, tr ? (tr.language || 'any') : 'off');
+        renderTracks();
+    };
+    // Re-apply the viewer's last subtitle language on a new file.
+    const autoPickSub = () => {
+        const want = store.get(SUB_CHOICE_KEY, null);
+        if (!want || want === 'off' || subTrackId != null) return;
+        const subs = (engine()?.getSubtitleTracks?.() || []).filter((s) => s.subtitleType !== 'image');
+        const match = subs.find((s) => s.language === want) || (want === 'any' ? subs[0] : null);
+        if (match) selectSub(match.id);
     };
 
-    // Appearance, as in TjGramApp's subtitle settings. Kept per viewer.
-    const SUB_PREFS_KEY = 'tj_sub_prefs';
-    const SUB_DEFAULTS = { size: 18, pos: 0, sync: 0, style: 'outline' };
-    let subPrefs = { ...SUB_DEFAULTS };
-    try { subPrefs = { ...SUB_DEFAULTS, ...JSON.parse(localStorage.getItem(SUB_PREFS_KEY) || '{}') }; } catch { /* ignore */ }
-    const saveSubPrefs = () => { try { localStorage.setItem(SUB_PREFS_KEY, JSON.stringify(subPrefs)); } catch { /* ignore */ } };
-    let subPreview = false; // sample line while the settings sheet is open
-
-    const positionSubs = () => {
-        if (!subOverlay || !stage) return;
-        const w = stage.clientWidth;
-        const h = stage.clientHeight;
-        const vw = video.videoWidth || 16;
-        const vh = video.videoHeight || 9;
-        const picH = vh * Math.min(w / vw, h / vh);
-        const picGap = (h - picH) / 2;
-        const controlsUp = !stage.hasAttribute('data-hidden') && !stage.hasAttribute('data-locked');
-        const barH = controlsUp && ovBottom ? ovBottom.offsetHeight : 0;
-        // Bottom of the picture, raised by the chosen position - but never under the control bar.
-        const bottom = Math.max(picGap + picH * (subPrefs.pos / 100), barH) + 8;
-        subOverlay.style.bottom = `${Math.round(bottom)}px`;
-        subOverlay.style.fontSize = `${Math.max(11, Math.round(subPrefs.size * Math.max(0.55, picH / 400)))}px`;
-        subOverlay.dataset.style = subPrefs.style;
+    // ------------------------------------------------------------ subtitles
+    // movi renders cues into its own overlay; it is hidden (::part) and mirrored
+    // here so the TjGramApp RTL rule and the viewer's style apply.
+    const SUB_DEFAULTS = { size: 100, pos: 0, style: 'outline' };
+    let subPrefs = { ...SUB_DEFAULTS, ...store.get('tj_sub_prefs', {}) };
+    if (!['outline', 'shadow', 'box'].includes(subPrefs.style)) subPrefs.style = 'outline';
+    let subSync = 0;
+    const applySubPrefs = () => {
+        ui.subs.style.setProperty('--sub-scale', subPrefs.size / 100);
+        ui.subs.style.setProperty('--sub-lift', subPrefs.pos);
+        ui.subs.dataset.style = subPrefs.style;
     };
+    const reflectSubPrefs = () => {
+        $('subSize').value = subPrefs.size; $('subSizeVal').textContent = `${subPrefs.size}%`;
+        $('subPos').value = subPrefs.pos; $('subPosVal').textContent = String(subPrefs.pos);
+        $('subSyncVal').textContent = `${subSync > 0 ? '+' : ''}${subSync.toFixed(1)}s`;
+        $('subStyleSeg').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.style === subPrefs.style));
+    };
+    const saveSubPrefs = () => { store.set('tj_sub_prefs', subPrefs); applySubPrefs(); reflectSubPrefs(); };
+    $('subSize').addEventListener('input', (e) => { subPrefs.size = Number(e.target.value); saveSubPrefs(); previewSubs(); });
+    $('subPos').addEventListener('input', (e) => { subPrefs.pos = Number(e.target.value); saveSubPrefs(); previewSubs(); });
+    $('subStyleSeg').addEventListener('click', (e) => {
+        const b = e.target.closest('button[data-style]');
+        if (b) { subPrefs.style = b.dataset.style; saveSubPrefs(); previewSubs(); }
+    });
+    stage.querySelectorAll('[data-sync]').forEach((b) => b.addEventListener('click', () => {
+        const d = Number(b.dataset.sync);
+        subSync = d === 0 ? 0 : Math.round((subSync + d) * 10) / 10;
+        try { el.subtitleDelay = subSync; } catch { /* ignore */ }
+        reflectSubPrefs();
+    }));
+    $('subStyleReset').addEventListener('click', () => {
+        subPrefs = { ...SUB_DEFAULTS }; subSync = 0;
+        try { el.subtitleDelay = 0; } catch { /* ignore */ }
+        saveSubPrefs(); previewSubs();
+    });
+    applySubPrefs();
 
-    // ---- Right-to-left, exactly as TjGramApp's TjSubtitleView does it ----
-    // Strip the bidi control characters the file already carries (a second
-    // layer of them is what reverses a line instead of fixing it) and any
-    // markup; then, if the cue has Hebrew/Arabic, move each line's trailing
-    // punctuation run to its front and lay the line out left-to-right.
-    const SUB_MARKUP = /\{[^}]*\}|<\/?[a-zA-Z][^>]*>/g;
+    // TjGramApp's TjSubtitleView rule: strip bidi controls and markup, and when
+    // the cue is Hebrew/Arabic move each line's trailing punctuation to its front,
+    // then lay the line out left-to-right.
     const BIDI_CONTROLS = /[‎‏‪-‮⁦-⁩]/g;
     const RTL_CHAR = /[֐-׿؀-ۿݐ-ݿࢠ-ࣿיִ-﷿ﹰ-﻿]/;
-    const TRAILING_PUNCT = new Set([',', '.', '!', '?', ':', ';', '…', '،', '؛', '؟']);
-
-    const cueLines = (text) => text.replace(SUB_MARKUP, '').replace(BIDI_CONTROLS, '')
-        .split(/\r?\n|\\[Nn]/).map((l) => l.trim()).filter(Boolean);
-
-    const movePunctuationToFront = (line) => {
-        if (line.length < 2 || TRAILING_PUNCT.has(line[0])) return line;
+    const TRAILING = new Set([',', '.', '!', '?', ':', ';', '…', '،', '؛', '؟', '-']);
+    const moveTrailing = (line) => {
+        if (line.length < 2 || TRAILING.has(line[0])) return line;
         let cut = line.length;
-        while (cut > 0 && TRAILING_PUNCT.has(line[cut - 1])) cut -= 1;
+        while (cut > 0 && TRAILING.has(line[cut - 1])) cut -= 1;
         if (cut === line.length || cut === 0) return line;
         return line.slice(cut) + line.slice(0, cut);
     };
-
-    const displayLines = (texts) => {
-        const raw = texts.flatMap(cueLines);
-        const rtl = RTL_CHAR.test(raw.join('\n'));
-        return rtl ? raw.map(movePunctuationToFront) : raw;
+    const fixLines = (lines) => {
+        const clean = lines.map((l) => l.replace(BIDI_CONTROLS, '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+        return RTL_CHAR.test(clean.join('\n')) ? clean.map(moveTrailing) : clean;
     };
-
-    const activeCues = () => {
-        if (subTrack == null) return [];
-        const now = video.currentTime * 1000 - subPrefs.sync * 1000;
-        return subCues.filter((c) => c.s <= now && now < c.e);
-    };
-
-    let shownCueKey = '';
-    const renderCues = () => {
-        if (!subOverlay) return;
-        let texts = activeCues().map((c) => c.t);
-        if (!texts.length && subPreview) texts = [t('subsPreview')];
-        const key = texts.join('|') + `|${subPreview}`;
-        if (key === shownCueKey) return;
-        shownCueKey = key;
-        subOverlay.replaceChildren(...displayLines(texts).map((l) => {
-            const line = document.createElement('div');
-            line.className = 'sub-line';
-            line.dir = 'ltr';
-            line.textContent = l;
-            return line;
+    let shownKey = '';
+    let previewTimer = null;
+    const drawLines = (lines) => {
+        const key = lines.join('\n');
+        if (key === shownKey) return;
+        shownKey = key;
+        ui.subs.replaceChildren(...lines.map((l) => {
+            const d = document.createElement('div');
+            d.className = 'sub-line'; d.dir = 'ltr'; d.textContent = l;
+            return d;
         }));
-        positionSubs();
+    };
+    const clearSubs = () => drawLines([]);
+    const previewSubs = () => {
+        clearTimeout(previewTimer);
+        drawLines(fixLines([t('subsPreview')]));
+        previewTimer = setTimeout(() => { previewTimer = null; shownKey = '\u0000'; mirror(); }, 1800);
     };
 
-
-    const mergeCues = (incoming) => {
-        const seen = new Set(subCues.map((c) => `${c.s}:${c.t}`));
-        incoming.forEach((c) => {
-            if (typeof c?.s !== 'number' || typeof c?.e !== 'number' || typeof c?.t !== 'string') return;
-            const k = `${c.s}:${c.t}`;
-            if (!seen.has(k)) { seen.add(k); subCues.push({ s: c.s, e: c.e, t: c.t }); }
-        });
-        subCues.sort((a, b) => a.s - b.s);
+    let moviOverlay = null;
+    const mirror = () => {
+        if (previewTimer) return;
+        const ov = moviOverlay;
+        if (!ov) return;
+        const hasImage = !!ov.querySelector('img, canvas, .movi-subtitle-image');
+        // Bitmap subtitles (PGS) can only be drawn by movi itself.
+        el.classList.toggle('own-subs', !hasImage);
+        if (hasImage) { clearSubs(); return; }
+        const shown = ov.style.display !== 'none';
+        const nodes = ov.querySelectorAll('.movi-subtitle-line');
+        let lines = nodes.length ? [...nodes].map((n) => n.textContent || '') : (ov.textContent ? [ov.textContent] : []);
+        lines = lines.flatMap((l) => l.split(/\n/));
+        drawLines(shown ? fixLines(lines) : []);
+    };
+    const hookOverlay = () => {
+        const ov = el.shadowRoot?.querySelector('.movi-subtitle-overlay');
+        if (!ov || ov === moviOverlay) return !!ov;
+        moviOverlay = ov;
+        new MutationObserver(mirror).observe(ov, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['style'] });
+        mirror();
+        return true;
     };
 
-    const loadSubWindow = async (idx) => {
-        if (subTrack == null || idx < 0 || subWindows.has(idx)) return;
-        if (duration > 0 && idx * SUB_WINDOW_S > duration) return;
-        const url = deriveAuxUrl('subtitle');
-        if (!url) return;
-        url.searchParams.set('track', subTrack);
-        url.searchParams.set('t', String(idx * SUB_WINDOW_S));
-        const gen = subGeneration;
-        subWindows.set(idx, 'loading');
-        try {
-            const res = await fetch(url.toString());
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            if (gen !== subGeneration) return;
-            mergeCues(Array.isArray(data?.cues) ? data.cues : []);
-            subIndexed = data?.indexed === true;
-            subWindows.set(idx, 'done');
-            shownCueKey = '';
-            renderCues();
-            scheduleSubFill();
-        } catch {
-            if (gen !== subGeneration) return;
-            subWindows.set(idx, 'error');
-            // Let a later timeupdate retry this window.
-            setTimeout(() => { if (gen === subGeneration && subWindows.get(idx) === 'error') subWindows.delete(idx); }, 8000);
-            if (idx === Math.floor(video.currentTime / SUB_WINDOW_S)) toast(t('subsRetry'));
-        }
-    };
-
-    // After the minute under the playhead is in, keep pulling the rest of the
-    // track one minute at a time (ahead of the playhead first, then from the
-    // start), so seeking anywhere later already has its subtitles. Only for
-    // files whose subtitle blocks are indexed: the server then reads just
-    // those few KiB per line, never the video around them.
-    let subFillBusy = false;
-    let subIndexed = false;
-    const scheduleSubFill = () => {
-        if (subFillBusy || subTrack == null || !subIndexed || !(duration > 0)) return;
-        const total = Math.ceil(duration / SUB_WINDOW_S);
-        const here = Math.max(0, Math.floor(video.currentTime / SUB_WINDOW_S));
-        let next = -1;
-        for (let i = 0; i < total && next < 0; i++) {
-            const idx = (here + i) % total;
-            if (!subWindows.has(idx)) next = idx;
-        }
-        if (next < 0) return;
-        subFillBusy = true;
-        const gen = subGeneration;
-        setTimeout(async () => {
-            if (gen === subGeneration) await loadSubWindow(next);
-            subFillBusy = false;
-            if (gen === subGeneration) scheduleSubFill();
-        }, 250);
-    };
-
-    const ensureSubWindows = () => {
-        if (subTrack == null) return;
-        const idx = Math.floor(Math.max(0, video.currentTime - subPrefs.sync) / SUB_WINDOW_S);
-        loadSubWindow(idx);
-        // Prefetch the next minute well before it's needed.
-        loadSubWindow(idx + 1);
-        if (!subLoadingToastShown && subWindows.get(idx) === 'loading') {
-            subLoadingToastShown = true;
-            toast(t('subsLoading'));
-        }
-    };
-
-    const updateSubIndicator = () => {
-        [tracksBtn, topTracksBtn].forEach((b) => b?.classList.toggle('is-on', subTrack != null));
-    };
-
-    const selectSubtitle = (trackNumber) => {
-        subGeneration += 1;
-        subTrack = trackNumber;
-        subCues = [];
-        subIndexed = false;
-        subWindows = new Map();
-        subLoadingToastShown = false;
-        shownCueKey = '';
-        renderCues();
-        updateSubIndicator();
-        ensureSubWindows();
-    };
-
-    video.addEventListener('timeupdate', () => { renderCues(); ensureSubWindows(); });
-    video.addEventListener('seeked', () => { renderCues(); ensureSubWindows(); });
-    video.addEventListener('loadedmetadata', positionSubs);
-    if (stage) {
-        new MutationObserver(positionSubs).observe(stage, {
-            attributes: true,
-            attributeFilter: ['data-hidden', 'data-expanded', 'data-locked'],
-        });
-        if (window.ResizeObserver) new ResizeObserver(positionSubs).observe(stage);
-    }
-
-    const syncSelectedOption = (container, selectedBtn) => {
-        container.querySelectorAll('.sheet-option').forEach((el) => el.classList.remove('selected'));
-        selectedBtn.classList.add('selected');
-    };
-
-    const optionWithLabels = (main, sub) => {
-        const btn = document.createElement('button');
-        btn.className = 'sheet-option';
-        const text = document.createElement('span');
-        text.className = 'opt-text';
-        const mainEl = document.createElement('span');
-        mainEl.className = 'opt-main';
-        mainEl.textContent = main;
-        text.appendChild(mainEl);
-        if (sub && sub !== main) {
-            const subEl = document.createElement('span');
-            subEl.className = 'opt-sub';
-            subEl.dir = 'auto';
-            subEl.textContent = sub;
-            text.appendChild(subEl);
-        }
-        btn.appendChild(text);
-        return btn;
-    };
-
-    const renderTrackSheets = () => {
-        const subtitleTracks = discoveredTracks.filter((t) => t.type === 'subtitle');
-        const audioTracks = discoveredTracks.filter((t) => t.type === 'audio');
-
-        if (subtitleOptions) {
-            subtitleOptions.innerHTML = '';
-            if (!subtitleTracks.length) {
-                subtitleOptions.innerHTML = `<div class="sheet-empty">${t('noSubs')}</div>`;
-            } else {
-                const offBtn = optionWithLabels(t('off'));
-                if (subTrack == null) offBtn.classList.add('selected');
-                offBtn.addEventListener('click', () => {
-                    selectSubtitle(null);
-                    syncSelectedOption(subtitleOptions, offBtn);
-                    closeSheets();
-                });
-                subtitleOptions.appendChild(offBtn);
-
-                subtitleTracks.forEach((track, index) => {
-                    const lang = languageName(track.language);
-                    const btn = optionWithLabels(lang || track.name || t('track', { n: index + 1 }), lang ? track.name : null);
-                    const usable = !track.codec || track.codec.startsWith('S_TEXT/');
-                    if (!usable) {
-                        btn.disabled = true;
-                        btn.title = t('imageSubs');
-                    }
-                    if (track.number === subTrack) btn.classList.add('selected');
-                    btn.addEventListener('click', () => {
-                        selectSubtitle(track.number);
-                        syncSelectedOption(subtitleOptions, btn);
-                        closeSheets();
-                    });
-                    subtitleOptions.appendChild(btn);
-                });
-            }
-        }
-
-        if (audioOptions) {
-            audioOptions.innerHTML = '';
-            if (audioTracks.length <= 1) {
-                audioOptions.innerHTML = `<div class="sheet-empty">${t('oneAudio')}</div>`;
-            } else {
-                audioTracks.forEach((track, index) => {
-                    const row = optionWithLabels(languageName(track.language) || track.name || t('track', { n: index + 1 }), track.name);
-                    row.disabled = true;
-                    row.title = t('audioNoSwitch');
-                    audioOptions.appendChild(row);
-                });
-            }
-        }
-    };
-
-    const initTracks = async () => {
-        const tracksUrl = deriveAuxUrl('tracks');
-        if (!tracksUrl) return;
-        try {
-            const res = await fetch(tracksUrl.toString());
-            if (!res.ok) return;
-            const data = await res.json();
-            discoveredTracks = Array.isArray(data?.tracks) ? data.tracks : [];
-        } catch {
-            discoveredTracks = [];
-        }
-        renderTrackSheets();
-    };
-
-    initTracks();
-    langListeners.push(renderTrackSheets, () => { shownCueKey = ''; renderCues(); });
-
-    [tracksBtn, topTracksBtn].forEach((btn) => btn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        renderTrackSheets();
-        openSheet(tracksSheet);
-    }));
-
-    // ═══════════════════════════════════════════
-    // SUBTITLE SETTINGS SHEET
-    // ═══════════════════════════════════════════
-    const subSize = document.getElementById('subSize');
-    const subPos = document.getElementById('subPos');
-    const subSync = document.getElementById('subSync');
-    const subStyleSeg = document.getElementById('subStyleSeg');
-
-    const reflectSubPrefs = () => {
-        if (subSize) subSize.value = subPrefs.size;
-        if (subPos) subPos.value = subPrefs.pos;
-        if (subSync) subSync.value = subPrefs.sync;
-        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-        set('subSizeVal', subPrefs.size);
-        set('subPosVal', subPrefs.pos);
-        set('subSyncVal', `${subPrefs.sync > 0 ? '+' : ''}${(+subPrefs.sync).toFixed(1).replace(/\.0$/, '')}s`);
-        [subSize, subPos, subSync].forEach((r) => {
-            if (!r) return;
-            const pct = ((r.value - r.min) / (r.max - r.min)) * 100;
-            r.style.setProperty('--fill', `${pct}%`);
-        });
-        subStyleSeg?.querySelectorAll('button').forEach((b) => b.classList.toggle('selected', b.dataset.style === subPrefs.style));
-    };
-
-    const applySubPrefs = (changes) => {
-        const syncChanged = 'sync' in changes && changes.sync !== subPrefs.sync;
-        subPrefs = { ...subPrefs, ...changes };
-        saveSubPrefs();
-        reflectSubPrefs();
-        if (syncChanged) ensureSubWindows();
-        shownCueKey = '';
-        renderCues();
-        positionSubs();
-    };
-
-    subSize?.addEventListener('input', () => applySubPrefs({ size: Number(subSize.value) }));
-    subPos?.addEventListener('input', () => applySubPrefs({ pos: Number(subPos.value) }));
-    subSync?.addEventListener('input', () => applySubPrefs({ sync: Math.round(Number(subSync.value) * 10) / 10 }));
-    document.getElementById('subSyncMinus')?.addEventListener('click', () =>
-        applySubPrefs({ sync: Math.max(-10, Math.round((subPrefs.sync - 0.1) * 10) / 10) }));
-    document.getElementById('subSyncPlus')?.addEventListener('click', () =>
-        applySubPrefs({ sync: Math.min(10, Math.round((subPrefs.sync + 0.1) * 10) / 10) }));
-    subStyleSeg?.querySelectorAll('button').forEach((b) =>
-        b.addEventListener('click', () => applySubPrefs({ style: b.dataset.style })));
-    document.getElementById('subStyleReset')?.addEventListener('click', () => applySubPrefs({ ...SUB_DEFAULTS }));
-
-    const setSubPreview = (on) => {
-        subPreview = on;
-        shownCueKey = '';
-        renderCues();
-    };
-    document.getElementById('subStyleBtn')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        reflectSubPrefs();
-        openSheet(subStyleSheet);
-        setSubPreview(true);
+    // ------------------------------------------------------------ engine events
+    el.classList.add('own-subs');
+    const onEvt = (name, fn) => el.addEventListener(name, fn);
+    onEvt('play', setState);
+    onEvt('pause', () => { setState(); showControls(); });
+    onEvt('playing', () => { setLoading(false); scheduleHide(); });
+    onEvt('waiting', () => setLoading(true));
+    onEvt('seeking', () => setLoading(true));
+    onEvt('seeked', () => setLoading(false));
+    onEvt('canplay', () => setLoading(false));
+    onEvt('loadeddata', () => { setLoading(false); setResolution(); hookOverlay(); });
+    onEvt('loadedmetadata', () => { setDuration(el.duration); setResolution(); renderTracks(); autoPickSub(); hookOverlay(); });
+    onEvt('durationchange', () => setDuration(el.duration));
+    onEvt('resize', setResolution);
+    onEvt('statechange', (e) => {
+        const s = e.detail;
+        if (s === 'buffering' || s === 'seeking' || s === 'loading') setLoading(true);
+        else if (s === 'playing' || s === 'paused' || s === 'ready' || s === 'ended') setLoading(false);
+        setState();
     });
-    document.getElementById('subStyleBack')?.addEventListener('click', () => {
-        setSubPreview(false);
-        renderTrackSheets();
-        openSheet(tracksSheet);
+    onEvt('timeupdate', () => {
+        if (!duration) setDuration(el.duration);
+        if (!scrubbing) renderTime(el.currentTime);
+        renderBuffered();
     });
-    // Any way the settings sheet closes ends the sample line.
-    new MutationObserver(() => {
-        if (subPreview && subStyleSheet?.hasAttribute('hidden')) setSubPreview(false);
-    }).observe(subStyleSheet || document.createElement('div'), { attributes: true, attributeFilter: ['hidden'] });
-    reflectSubPrefs();
-
-    // ═══════════════════════════════════════════
-    // SHEETS: drag the top (handle / title) down to close
-    // ═══════════════════════════════════════════
-    allSheets.forEach((sheet) => {
-        let drag = null;
-        sheet.addEventListener('pointerdown', (e) => {
-            if (!e.target.closest('.sheet-handle, .sheet-head, .sheet-title')) return;
-            if (e.target.closest('button')) return;
-            if (window.matchMedia('(min-width: 700px)').matches) return; // side panel: closes with X
-            drag = { y: e.clientY, time: performance.now(), dy: 0, id: e.pointerId };
-            sheet.setPointerCapture?.(e.pointerId);
-            sheet.style.transition = 'none';
-        });
-        sheet.addEventListener('pointermove', (e) => {
-            if (!drag || e.pointerId !== drag.id) return;
-            drag.dy = Math.max(0, e.clientY - drag.y);
-            sheet.style.transform = `translateY(${drag.dy}px)`;
-        });
-        const end = () => {
-            if (!drag) return;
-            const { dy, time } = drag;
-            drag = null;
-            const fast = dy / Math.max(1, performance.now() - time) > 0.5;
-            sheet.style.transition = 'transform .2s ease';
-            if (dy > 80 || (fast && dy > 20)) {
-                sheet.style.transform = 'translateY(110%)';
-                setTimeout(() => {
-                    closeSheets();
-                    sheet.style.transform = '';
-                    sheet.style.transition = '';
-                }, 200);
-            } else {
-                sheet.style.transform = '';
-            }
-        };
-        sheet.addEventListener('pointerup', end);
-        sheet.addEventListener('pointercancel', end);
+    onEvt('progress', renderBuffered);
+    onEvt('ended', () => { setState(); showControls(); });
+    onEvt('volumechange', renderVolume);
+    onEvt('ratechange', renderSpeed);
+    onEvt('trackschange', () => { renderTracks(); autoPickSub(); });
+    onEvt('audiotrackchange', renderTracks);
+    onEvt('subtitletrackchange', () => { renderTracks(); mirror(); });
+    onEvt('pipchange', (e) => { ui.pipCover.hidden = !e.detail?.pip; });
+    onEvt('error', () => {
+        // movi falls back to native <video> on its own; only a final failure lands here.
+        setTimeout(() => {
+            if (!(el.duration > 0) && !el.currentTime) { setLoading(false); ui.err.hidden = false; }
+        }, 1500);
     });
 
-    // ═══════════════════════════════════════════
-    // KEYBOARD SHORTCUTS
-    // ═══════════════════════════════════════════
-    document.addEventListener('keydown', (e) => {
-        if (e.target instanceof HTMLInputElement) return;
-        switch (e.key) {
-            case ' ':
-            case 'k':
-                e.preventDefault();
-                togglePlay();
-                showControls();
-                break;
-            case 'ArrowLeft':
-                seekBy(-10);
-                break;
-            case 'ArrowRight':
-                seekBy(10);
-                break;
-            case 'f':
-                toggleFullscreen();
-                break;
-            case 'm':
-                try { if (video) video.muted = !video.muted; } catch { /* ignore */ }
-                break;
-            case 'Escape':
-                if (allSheets.some((s) => !s.hasAttribute('hidden'))) closeSheets();
-                else if (stage?.hasAttribute('data-pseudo-fs')) setExpanded(false, false);
-                break;
-        }
+    customElements.whenDefined('movi-player').then(() => {
+        hookOverlay();
+        renderVolume(); renderSpeed(); setState();
+        // The overlay is created lazily on some paths; keep looking briefly.
+        let tries = 0;
+        const iv = setInterval(() => { if (hookOverlay() || ++tries > 40) clearInterval(iv); }, 250);
     });
+    // The module script failed to load (offline CDN, very old browser).
+    setTimeout(() => {
+        if (!customElements.get('movi-player')) { setLoading(false); ui.err.hidden = false; }
+    }, 15000);
+
+    langListeners.push(() => { renderTracks(); renderSettings(); });
+    setState();
 })();
