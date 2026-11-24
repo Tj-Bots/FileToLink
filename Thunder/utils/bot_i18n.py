@@ -56,7 +56,7 @@ _EN = {
         "💕 If I help you, share me with your friends!"
     ),
     "b_links": "🗂 My links", "b_settings": "⚙️ Settings", "b_help": "📖 Help", "b_about": "⚜️ About",
-    "b_back": "⬅️ Back", "b_close": "✖️ Close", "b_channel": "📢 Update channel",
+    "b_back": "⬅️ Back", "b_close": "✖️ Close", "b_channel": "📢 Updates", "b_group": "💬 Group",
     # ---- link message
     "ready": (
         "--__**Your Link Generated !**__--\n\n"

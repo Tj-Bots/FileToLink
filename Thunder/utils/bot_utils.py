@@ -39,10 +39,12 @@ async def build_welcome(bot: Client, user, lang: str = "en"):
     link, title = await get_force_info(bot)
 
     btns = [
-        [InlineKeyboardButton(tr(lang, "b_help"), callback_data="help_command"),
-         InlineKeyboardButton(tr(lang, "b_about"), callback_data="about_command")],
-        [InlineKeyboardButton(tr(lang, "b_links"), callback_data="ml:p:0"),
-         InlineKeyboardButton(tr(lang, "b_settings"), callback_data="st")],
+        [InlineKeyboardButton(tr(lang, "b_help"), callback_data="help_command", style=ButtonStyle.PRIMARY),
+         InlineKeyboardButton(tr(lang, "b_about"), callback_data="about_command", style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(tr(lang, "b_links"), callback_data="ml:p:0", style=ButtonStyle.PRIMARY),
+         InlineKeyboardButton(tr(lang, "b_settings"), callback_data="st", style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(tr(lang, "b_channel"), url=UPDATES_CHANNEL_URL, style=ButtonStyle.SUCCESS),
+         InlineKeyboardButton(tr(lang, "b_group"), url=GROUP_URL, style=ButtonStyle.SUCCESS)],
         [close_button(lang)],
     ]
 
@@ -50,6 +52,10 @@ async def build_welcome(bot: Client, user, lang: str = "en"):
         btns.insert(0, [InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link)])
 
     return txt, InlineKeyboardMarkup(btns)
+
+
+UPDATES_CHANNEL_URL = "https://t.me/TJ_Bots"
+GROUP_URL = "https://t.me/TJ_Bots_Chat"
 
 
 # Panel buttons carry no colour, except Back (blue) and Close (red); only the
