@@ -8,7 +8,9 @@ Python 3.15 Telegram bot converting files to direct HTTP links. Uses wzgram, aio
 python -m Thunder          # Primary entry point
 bash thunder.sh            # Updates from UPSTREAM_REPO, then runs the bot
 python3 update.py          # Update only (rolls back if the new tree is unusable)
-# update.py exits 0 when it cannot apply: no UPSTREAM_REPO, or no git/.git in a container
+# UPSTREAM_REPO unset = Tj-Bots/FileToLink branch `new`; UPSTREAM_REPO= (empty) turns updates off.
+# No git and no .git (Heroku slug): a GitHub repo is fetched as a tar.gz archive and only its
+# files are overwritten (backed up first, restored on failure); nothing else is deleted.
 ```
 
 ## Dependencies
@@ -56,8 +58,9 @@ Two gotchas:
   `config_sample.env` corrupt variables (`PORT` becomes `8080 # Web server port`).
   Generate the file with `python-dotenv` outside the repo (see README), or mount `config.env`.
 
-Self-update is skipped inside the image: there is no `git` and no `.git`, so
-`UPSTREAM_REPO` has no effect there. Update a container by building a new image.
+Inside the image there is no `git` and no `.git`, so update.py would use the
+archive path, but the image's code is not writable by uid `10001` and the update
+rolls back. Update a container by building a new image.
 
 ## Key Imports
 

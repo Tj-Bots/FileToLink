@@ -1,12 +1,15 @@
+import re
+import tarfile
+import urllib.request
 from fnmatch import fnmatch
-from os import chmod, environ, listdir, path, remove, replace, rmdir
+from os import chmod, environ, listdir, makedirs, path, remove, replace, rmdir, walk
 from pathlib import Path, PurePath
-from shutil import copytree, ignore_patterns, rmtree
+from shutil import copy2, copytree, ignore_patterns, rmtree
 from sqlite3 import connect as sqlite_connect
 from stat import S_IWRITE
 from subprocess import run as srun
 from sys import executable, exit
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, mkdtemp
 
 from dotenv import load_dotenv
 
@@ -34,8 +37,16 @@ if not path.exists("config.env") and path.exists(_CONFIG_BACKUP):
 
 load_dotenv('config.env', override=True)
 
-UPSTREAM_REPO = environ.get("UPSTREAM_REPO", "")
-UPSTREAM_BRANCH = environ.get("UPSTREAM_BRANCH", "main")
+# Unset means "this project's own repository": a deployment whose host settings
+# cannot be edited (no dashboard access) still updates on /restart. Set it to an
+# empty value to turn self-update off.
+DEFAULT_REPO = "https://github.com/Tj-Bots/FileToLink"
+DEFAULT_BRANCH = "new"
+UPSTREAM_REPO = environ.get("UPSTREAM_REPO", DEFAULT_REPO).strip()
+UPSTREAM_BRANCH = (environ.get("UPSTREAM_BRANCH")
+                   or (DEFAULT_BRANCH if UPSTREAM_REPO == DEFAULT_REPO else "main")).strip()
+
+_GITHUB = re.compile(r"github\.com[/:]([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?/?$")
 
 
 def _generated(name: str) -> bool:
@@ -59,7 +70,7 @@ def _on_rmtree_error(func, target, exc):
     func(target)
 
 
-def _preflight(repo: str, branch: str) -> bool | None:
+def _preflight(repo: str, branch: str) -> bool | str | None:
     """Decide whether this deployment can self-update at all.
 
     Returns True to proceed, None when the deployment structurally cannot update
@@ -75,6 +86,10 @@ def _preflight(repo: str, branch: str) -> bool | None:
 
     has_history = path.exists(".git")
     if not has_history:
+        if detail and _GITHUB.search(repo):
+            # A slug deployment (Heroku) has no git at all, but a GitHub
+            # repository can still be fetched as an archive.
+            return "archive"
         if detail:
             logger.info(
                 f"Self-update is not applicable in this deployment ({detail}): "
@@ -351,8 +366,128 @@ def _stale_sessions() -> list[str]:
     return stale
 
 
+def _archive_files(root: str) -> list[str]:
+    """Relative paths of the deployable files under an extracted archive."""
+    found = []
+    for base, dirs, files in walk(root):
+        rel_base = path.relpath(base, root)
+        dirs[:] = [d for d in dirs if not _generated(d)]
+        for name in files:
+            rel = path.normpath(path.join(rel_base, name))
+            if not _generated_relative(rel):
+                found.append(rel)
+    return found
+
+
+def _same_file(a: str, b: str) -> bool:
+    try:
+        if path.getsize(a) != path.getsize(b):
+            return False
+        with open(a, "rb") as fa, open(b, "rb") as fb:
+            return fa.read() == fb.read()
+    except OSError:
+        return False
+
+
+def _archive_update(repo: str, branch: str) -> bool:
+    """Update without git: download the branch as a GitHub archive.
+
+    Only files the archive contains are written. Nothing else in the directory
+    is deleted, because on a slug host the runtime (e.g. Heroku's .heroku)
+    lives beside the code. Every overwritten file is backed up first and every
+    new file recorded, so a failed validation restores the tree exactly.
+    """
+    owner, name = _GITHUB.search(repo).groups()
+    url = f"https://codeload.github.com/{owner}/{name}/tar.gz/refs/heads/{branch}"
+    work = mkdtemp(prefix="thunder_update_")
+    backup = path.join(work, "backup")
+    written: list[str] = []
+    created: list[str] = []
+    try:
+        archive = path.join(work, "src.tar.gz")
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": "thunder-update"})
+            with urllib.request.urlopen(request, timeout=90) as resp, open(archive, "wb") as out:
+                while chunk := resp.read(1 << 16):
+                    out.write(chunk)
+        except Exception as e:
+            logger.error(f"Could not download {owner}/{name} branch {branch}: {e}. Nothing has been changed.")
+            return False
+
+        extract = path.join(work, "src")
+        try:
+            with tarfile.open(archive) as tar:
+                members = []
+                for member in tar.getmembers():
+                    parts = PurePath(member.name).parts
+                    if member.name.startswith("/") or ".." in parts:
+                        continue
+                    if not (member.isfile() or member.isdir()):
+                        continue
+                    members.append(member)
+                tar.extractall(extract, members=members)
+        except (tarfile.TarError, OSError) as e:
+            logger.error(f"The downloaded archive is unusable ({e}). Nothing has been changed.")
+            return False
+        tops = listdir(extract)
+        if len(tops) != 1 or not path.isdir(path.join(extract, tops[0])):
+            logger.error("The downloaded archive has an unexpected layout. Nothing has been changed.")
+            return False
+        root = path.join(extract, tops[0])
+        files = _archive_files(root)
+        if "update.py" not in files or not any(f.startswith("Thunder") for f in files):
+            logger.error("The downloaded archive is not this project. Nothing has been changed.")
+            return False
+
+        try:
+            for rel in files:
+                src = path.join(root, rel)
+                if path.isdir(rel):
+                    logger.error(f"{rel} is a directory here; nothing has been changed.")
+                    raise OSError(rel)
+                if path.exists(rel):
+                    if _same_file(src, rel):
+                        continue
+                    saved = path.join(backup, rel)
+                    makedirs(path.dirname(saved) or ".", exist_ok=True)
+                    copy2(rel, saved)
+                    written.append(rel)
+                else:
+                    created.append(rel)
+                makedirs(path.dirname(rel) or ".", exist_ok=True)
+                copy2(src, rel)
+        except OSError as e:
+            logger.error(f"Could not write the update ({e}).")
+            ok = False
+        else:
+            changed = len(written) + len(created)
+            logger.info(f"Applied {changed} changed file(s) from {owner}/{name}@{branch}.")
+            ok = _install_requirements() and _validate()
+
+        if not ok:
+            for rel in written:
+                try:
+                    copy2(path.join(backup, rel), rel)
+                except OSError as e:
+                    logger.error(f"Could not restore {rel}: {e}")
+            for rel in created:
+                try:
+                    remove(rel)
+                except OSError:
+                    pass
+            logger.error("Update failed; rolled back to the previous working code.")
+            return False
+
+        logger.info("Successfully updated with Latest Updates!")
+        return True
+    finally:
+        rmtree(work, ignore_errors=True)
+
+
 def _run_update(repo: str, branch: str) -> bool | None:
     preflight = _preflight(repo, branch)
+    if preflight == "archive":
+        return _archive_update(repo, branch)
     if preflight is not True:
         # False: preconditions failed. None: self-update does not apply here.
         return preflight
