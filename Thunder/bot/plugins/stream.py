@@ -22,10 +22,10 @@ from Thunder.utils.decorators import (check_banned, get_shortener_status,
                                       require_token)
 from Thunder.utils.force_channel import force_channel_check
 from Thunder.utils import user_links
-from Thunder.utils.bot_i18n import tr
 from Thunder.utils.logger import logger
 from Thunder.utils.messages import (
-    MSG_BATCH_LINKS_READY, MSG_BUTTON_START_CHAT,
+    MSG_BATCH_LINKS_READY, MSG_BUTTON_DOWNLOAD, MSG_BUTTON_START_CHAT,
+    MSG_BUTTON_STREAM_NOW, MSG_LINKS, MSG_PROCESSING_FILE,
     MSG_CRITICAL_ERROR, MSG_DM_BATCH_PREFIX,
     MSG_DM_SINGLE_PREFIX, MSG_ERROR_DM_FAILED, MSG_ERROR_INVALID_NUMBER,
     MSG_ERROR_NO_FILE, MSG_ERROR_NOT_ADMIN, MSG_ERROR_NUMBER_RANGE,
@@ -63,33 +63,19 @@ async def fwd_media(m_msg: Message) -> Optional[Message]:
 
 
 def links_text(links: Dict[str, Any]) -> str:
-    lang = links.get('lang', 'en')
-    ttl = links.get('ttl')
-    validity = (tr(lang, 'v_for', left=tr(lang, f'ttl_{ttl}'))
-                if links.get('expires_at') and ttl else tr(lang, 'v_forever'))
-    name = str(links['media_name']).replace('`', "'")
-    return tr(lang, 'ready', name=name, size=links['media_size'], validity=validity)
+    return MSG_LINKS.format(
+        file_name=links['media_name'],
+        file_size=links['media_size'],
+        download_link=links['online_link'],
+        stream_link=links['stream_link']
+    )
 
 
 def get_link_buttons(links, private: bool = False):
-    lang = links.get('lang', 'en')
-    rows = [
-        [InlineKeyboardButton(tr(lang, 'b_watch'), url=links['stream_link'], style=enums.ButtonStyle.SUCCESS),
-         InlineKeyboardButton(tr(lang, 'b_download'), url=links['online_link'], style=enums.ButtonStyle.PRIMARY)],
-    ]
-    copy_row = [InlineKeyboardButton(tr(lang, 'b_copy'), copy_text=links['online_link'])]
-    # The panels edit the message they are opened from, so only offer them where
-    # nobody else is reading it.
-    if private and links.get('code'):
-        copy_row.append(InlineKeyboardButton(tr(lang, 'b_delete'), callback_data=f"ml:d:{links['code']}:0",
-                                             style=enums.ButtonStyle.DANGER))
-    rows.append(copy_row)
-    if private:
-        rows.append([
-            InlineKeyboardButton(tr(lang, 'b_links'), callback_data="ml:p:0"),
-            InlineKeyboardButton(tr(lang, 'b_settings'), callback_data="st"),
-        ])
-    return InlineKeyboardMarkup(rows)
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton(MSG_BUTTON_STREAM_NOW, url=links['stream_link'], style=enums.ButtonStyle.SUCCESS),
+        InlineKeyboardButton(MSG_BUTTON_DOWNLOAD, url=links['online_link'], style=enums.ButtonStyle.SUCCESS)
+    ]])
 
 async def validate_request_common(client: Client, message: Message) -> Optional[bool]:
     if not await check_banned(client, message):
@@ -310,12 +296,11 @@ async def private_receive_handler(bot: Client, msg: Message, **kwargs):
         notification_msg = handler_kwargs.get('notification_msg')
 
         await log_newusr(client, message.from_user.id, message.from_user.first_name or "")
-        processing = tr(await user_links.lang_for(message.from_user), 'processing')
         try:
-            status_msg = await message.reply_text(processing, quote=True)
+            status_msg = await message.reply_text(MSG_PROCESSING_FILE, quote=True)
         except FloodWait as e:
             await asyncio.sleep(e.value)
-            status_msg = await message.reply_text(processing, quote=True)
+            status_msg = await message.reply_text(MSG_PROCESSING_FILE, quote=True)
         await process_single(client, message, message, status_msg, shortener_val, notification_msg=notification_msg)
 
     await handle_rate_limited_request(bot, msg, _actual_private_receive_handler, **kwargs)
@@ -480,7 +465,6 @@ async def process_single(
             if requester:
                 try:
                     user_view = await user_links.personal_links(requester.id, canonical_record, shortener_val)
-                    user_view['lang'] = await user_links.lang_for(requester)
                     log_links, links = links, user_view
                 except Exception as e:
                     logger.error(f"Personal link failed for {requester.id}, sending the shared link: {e}",

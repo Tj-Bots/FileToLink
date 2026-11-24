@@ -136,7 +136,7 @@ MSG_LOG_FILE_MISSING = "⚠️ **Log File Missing:** Could not find the log file
 
 # BUTTON TEXTS (User-facing)
 
-MSG_BUTTON_STREAM_NOW = "🎬 Watch"
+MSG_BUTTON_STREAM_NOW = "🖥️ Stream"
 MSG_BUTTON_DOWNLOAD = "🚀 Download"
 MSG_BUTTON_GET_HELP = "📖 Help"
 MSG_BUTTON_CANCEL_BROADCAST = "🛑 Cancel Broadcast"
@@ -229,13 +229,13 @@ MSG_DC_UNKNOWN = "Unknown"
 # File Link Generation
 MSG_DM_SINGLE_PREFIX = "📬 **From {chat_title}**\n"
 MSG_LINKS = (
-    "✅ **Your link is ready!**\n\n"
-    "📄 `{file_name}`\n"
-    "💾 {file_size}  ·  ⏳ {validity}\n\n"
-    "🎬 **Watch online**\n"
+    "✨ **Your Links are Ready!** ✨\n\n"
+    "> `{file_name} ({file_size})`\n\n"
+    "🚀 **Download Link:**\n"
+    "> {download_link}\n\n"
+    "🖥️ **Stream Link:**\n"
     "> {stream_link}\n\n"
-    "🚀 **Direct download**\n"
-    "> {download_link}"
+    "⌛️ **Note: Links remain active while the bot is running and the file is accessible.**"
 )
 
 # USER NOTIFICATIONS

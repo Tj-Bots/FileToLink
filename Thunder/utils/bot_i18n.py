@@ -16,7 +16,7 @@ LANG_NAMES = {
 
 T: dict[str, dict[str, str]] = {
     "en": {
-        "start": "⚡ **Thunder**\n\nHi {name}! Send me any file and I'll give you a link to watch it online and a link to download it.\n\n📤 **Send a file to begin**",
+        "start": "👋 Hi {name}! Send me any file and I'll give you a link to watch it online and a link to download it.\n\n📤 **Send a file to begin**",
         "help": "❓ **How it works**\n\n1️⃣ Send or forward me any file\n2️⃣ Get a link to watch online and a link to download\n3️⃣ Manage your links in 🗂 My links\n\n👥 **In groups**\nReply to a file with /link, or /link 5 for five files in a row (up to {max}). I need to be an admin there.\n\n⏳ Choose how long links last in ⚙️ Settings.",
         "about": "ℹ️ **About Thunder**\n\n🎬 Online player with audio tracks and subtitles\n🚀 Fast downloads of any size\n🔐 Links that expire, or that you can delete\n🌍 Available in 17 languages\n\nMade with ❤️ by @TJ_Bots",
         "b_links": "🗂 My links", "b_settings": "⚙️ Settings", "b_help": "❓ Help", "b_about": "ℹ️ About",
@@ -48,7 +48,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "This link no longer exists.", "error": "⚠️ Something went wrong. Please try again.",
     },
     "he": {
-        "start": "⚡ **Thunder**\n\nהיי {name}! שלח לי כל קובץ ואני אתן לך קישור לצפייה אונליין וקישור להורדה.\n\n📤 **שלח קובץ כדי להתחיל**",
+        "start": "👋 היי {name}! שלח לי כל קובץ ואני אתן לך קישור לצפייה אונליין וקישור להורדה.\n\n📤 **שלח קובץ כדי להתחיל**",
         "help": "❓ **איך זה עובד**\n\n1️⃣ שלח או העבר לי כל קובץ\n2️⃣ קבל קישור לצפייה וקישור להורדה\n3️⃣ נהל את הקישורים שלך ב־🗂 הקישורים שלי\n\n👥 **בקבוצות**\nהגב לקובץ עם ‎/link, או ‎/link 5 לחמישה קבצים ברצף (עד {max}). אני צריך להיות מנהל בקבוצה.\n\n⏳ את תוקף הקישורים בוחרים ב־⚙️ הגדרות.",
         "about": "ℹ️ **על Thunder**\n\n🎬 נגן אונליין עם ערוצי שמע וכתוביות\n🚀 הורדות מהירות בכל גודל\n🔐 קישורים שפגים, או שאפשר למחוק\n🌍 זמין ב־17 שפות\n\nנבנה באהבה ❤️ ע״י @TJ_Bots",
         "b_links": "🗂 הקישורים שלי", "b_settings": "⚙️ הגדרות", "b_help": "❓ עזרה", "b_about": "ℹ️ אודות",
@@ -80,7 +80,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "הקישור הזה כבר לא קיים.", "error": "⚠️ משהו השתבש. נסה שוב.",
     },
     "ar": {
-        "start": "⚡ **Thunder**\n\nمرحبًا {name}! أرسل لي أي ملف وسأعطيك رابطًا للمشاهدة أونلاين ورابطًا للتنزيل.\n\n📤 **أرسل ملفًا للبدء**",
+        "start": "👋 مرحبًا {name}! أرسل لي أي ملف وسأعطيك رابطًا للمشاهدة أونلاين ورابطًا للتنزيل.\n\n📤 **أرسل ملفًا للبدء**",
         "help": "❓ **كيف يعمل**\n\n1️⃣ أرسل أو أعد توجيه أي ملف\n2️⃣ احصل على رابط للمشاهدة ورابط للتنزيل\n3️⃣ أدِر روابطك من 🗂 روابطي\n\n👥 **في المجموعات**\nرُدّ على ملف بـ ‎/link، أو ‎/link 5 لخمسة ملفات متتالية (حتى {max}). يجب أن أكون مشرفًا هناك.\n\n⏳ اختر مدة صلاحية الروابط من ⚙️ الإعدادات.",
         "about": "ℹ️ **عن Thunder**\n\n🎬 مشغل أونلاين مع مسارات صوت وترجمات\n🚀 تنزيلات سريعة لأي حجم\n🔐 روابط تنتهي صلاحيتها أو يمكنك حذفها\n🌍 متاح بـ 17 لغة\n\nصُنع بـ ❤️ بواسطة @TJ_Bots",
         "b_links": "🗂 روابطي", "b_settings": "⚙️ الإعدادات", "b_help": "❓ مساعدة", "b_about": "ℹ️ حول",
@@ -112,7 +112,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "هذا الرابط لم يعد موجودًا.", "error": "⚠️ حدث خطأ. حاول مرة أخرى.",
     },
     "fa": {
-        "start": "⚡ **Thunder**\n\nسلام {name}! هر فایلی برایم بفرست تا یک لینک برای تماشای آنلاین و یک لینک برای دانلود بگیری.\n\n📤 **برای شروع یک فایل بفرست**",
+        "start": "👋 سلام {name}! هر فایلی برایم بفرست تا یک لینک برای تماشای آنلاین و یک لینک برای دانلود بگیری.\n\n📤 **برای شروع یک فایل بفرست**",
         "help": "❓ **چطور کار می‌کند**\n\n1️⃣ هر فایلی را بفرست یا فوروارد کن\n2️⃣ لینک تماشا و لینک دانلود بگیر\n3️⃣ لینک‌هایت را در 🗂 لینک‌های من مدیریت کن\n\n👥 **در گروه‌ها**\nروی فایل با ‎/link پاسخ بده، یا ‎/link 5 برای پنج فایل پشت سر هم (تا {max}). باید در گروه ادمین باشم.\n\n⏳ مدت اعتبار لینک‌ها را در ⚙️ تنظیمات انتخاب کن.",
         "about": "ℹ️ **درباره Thunder**\n\n🎬 پخش‌کننده آنلاین با ترک صوتی و زیرنویس\n🚀 دانلود سریع با هر حجمی\n🔐 لینک‌هایی که منقضی می‌شوند یا قابل حذف‌اند\n🌍 به ۱۷ زبان\n\nساخته شده با ❤️ توسط @TJ_Bots",
         "b_links": "🗂 لینک‌های من", "b_settings": "⚙️ تنظیمات", "b_help": "❓ راهنما", "b_about": "ℹ️ درباره",
@@ -144,7 +144,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "این لینک دیگر وجود ندارد.", "error": "⚠️ مشکلی پیش آمد. دوباره تلاش کن.",
     },
     "ru": {
-        "start": "⚡ **Thunder**\n\nПривет, {name}! Пришли мне любой файл — я дам ссылку для просмотра онлайн и ссылку для скачивания.\n\n📤 **Отправь файл, чтобы начать**",
+        "start": "👋 Привет, {name}! Пришли мне любой файл — я дам ссылку для просмотра онлайн и ссылку для скачивания.\n\n📤 **Отправь файл, чтобы начать**",
         "help": "❓ **Как это работает**\n\n1️⃣ Отправь или перешли мне любой файл\n2️⃣ Получи ссылку для просмотра и ссылку для скачивания\n3️⃣ Управляй ссылками в 🗂 Мои ссылки\n\n👥 **В группах**\nОтветь на файл командой /link или /link 5 для пяти файлов подряд (до {max}). Мне нужны права администратора.\n\n⏳ Срок действия ссылок выбирается в ⚙️ Настройках.",
         "about": "ℹ️ **О Thunder**\n\n🎬 Онлайн-плеер с аудиодорожками и субтитрами\n🚀 Быстрые загрузки любого размера\n🔐 Ссылки с истечением срока или удалением\n🌍 17 языков\n\nСделано с ❤️ @TJ_Bots",
         "b_links": "🗂 Мои ссылки", "b_settings": "⚙️ Настройки", "b_help": "❓ Помощь", "b_about": "ℹ️ О боте",
@@ -176,7 +176,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "Этой ссылки больше нет.", "error": "⚠️ Что-то пошло не так. Попробуй ещё раз.",
     },
     "uk": {
-        "start": "⚡ **Thunder**\n\nПривіт, {name}! Надішли мені будь-який файл — я дам посилання для перегляду онлайн і посилання для завантаження.\n\n📤 **Надішли файл, щоб почати**",
+        "start": "👋 Привіт, {name}! Надішли мені будь-який файл — я дам посилання для перегляду онлайн і посилання для завантаження.\n\n📤 **Надішли файл, щоб почати**",
         "help": "❓ **Як це працює**\n\n1️⃣ Надішли або перешли мені будь-який файл\n2️⃣ Отримай посилання для перегляду та завантаження\n3️⃣ Керуй посиланнями в 🗂 Мої посилання\n\n👥 **У групах**\nВідповідай на файл командою /link або /link 5 для п'яти файлів поспіль (до {max}). Мені потрібні права адміністратора.\n\n⏳ Термін дії посилань обирається в ⚙️ Налаштуваннях.",
         "about": "ℹ️ **Про Thunder**\n\n🎬 Онлайн-плеєр з аудіодоріжками та субтитрами\n🚀 Швидкі завантаження будь-якого розміру\n🔐 Посилання, що спливають або видаляються\n🌍 17 мов\n\nЗроблено з ❤️ @TJ_Bots",
         "b_links": "🗂 Мої посилання", "b_settings": "⚙️ Налаштування", "b_help": "❓ Допомога", "b_about": "ℹ️ Про бота",
@@ -208,7 +208,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "Цього посилання більше немає.", "error": "⚠️ Щось пішло не так. Спробуй ще раз.",
     },
     "es": {
-        "start": "⚡ **Thunder**\n\n¡Hola, {name}! Envíame cualquier archivo y te daré un enlace para verlo en línea y otro para descargarlo.\n\n📤 **Envía un archivo para empezar**",
+        "start": "👋 ¡Hola, {name}! Envíame cualquier archivo y te daré un enlace para verlo en línea y otro para descargarlo.\n\n📤 **Envía un archivo para empezar**",
         "help": "❓ **Cómo funciona**\n\n1️⃣ Envíame o reenvíame cualquier archivo\n2️⃣ Recibe un enlace para verlo y otro para descargarlo\n3️⃣ Gestiona tus enlaces en 🗂 Mis enlaces\n\n👥 **En grupos**\nResponde a un archivo con /link, o /link 5 para cinco archivos seguidos (hasta {max}). Necesito ser administrador.\n\n⏳ Elige cuánto duran los enlaces en ⚙️ Ajustes.",
         "about": "ℹ️ **Sobre Thunder**\n\n🎬 Reproductor en línea con pistas de audio y subtítulos\n🚀 Descargas rápidas de cualquier tamaño\n🔐 Enlaces que caducan o que puedes borrar\n🌍 Disponible en 17 idiomas\n\nHecho con ❤️ por @TJ_Bots",
         "b_links": "🗂 Mis enlaces", "b_settings": "⚙️ Ajustes", "b_help": "❓ Ayuda", "b_about": "ℹ️ Acerca de",
@@ -240,7 +240,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "Este enlace ya no existe.", "error": "⚠️ Algo salió mal. Inténtalo de nuevo.",
     },
     "pt": {
-        "start": "⚡ **Thunder**\n\nOlá, {name}! Envie qualquer arquivo e eu te dou um link para assistir online e outro para baixar.\n\n📤 **Envie um arquivo para começar**",
+        "start": "👋 Olá, {name}! Envie qualquer arquivo e eu te dou um link para assistir online e outro para baixar.\n\n📤 **Envie um arquivo para começar**",
         "help": "❓ **Como funciona**\n\n1️⃣ Envie ou encaminhe qualquer arquivo\n2️⃣ Receba um link para assistir e outro para baixar\n3️⃣ Gerencie seus links em 🗂 Meus links\n\n👥 **Em grupos**\nResponda a um arquivo com /link, ou /link 5 para cinco arquivos seguidos (até {max}). Preciso ser administrador.\n\n⏳ Escolha a validade dos links em ⚙️ Configurações.",
         "about": "ℹ️ **Sobre o Thunder**\n\n🎬 Player online com faixas de áudio e legendas\n🚀 Downloads rápidos de qualquer tamanho\n🔐 Links que expiram ou que você pode apagar\n🌍 Disponível em 17 idiomas\n\nFeito com ❤️ por @TJ_Bots",
         "b_links": "🗂 Meus links", "b_settings": "⚙️ Configurações", "b_help": "❓ Ajuda", "b_about": "ℹ️ Sobre",
@@ -272,7 +272,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "Este link não existe mais.", "error": "⚠️ Algo deu errado. Tente novamente.",
     },
     "fr": {
-        "start": "⚡ **Thunder**\n\nSalut {name} ! Envoie-moi n'importe quel fichier et je te donne un lien pour le regarder en ligne et un lien pour le télécharger.\n\n📤 **Envoie un fichier pour commencer**",
+        "start": "👋 Salut {name} ! Envoie-moi n'importe quel fichier et je te donne un lien pour le regarder en ligne et un lien pour le télécharger.\n\n📤 **Envoie un fichier pour commencer**",
         "help": "❓ **Comment ça marche**\n\n1️⃣ Envoie ou transfère-moi un fichier\n2️⃣ Reçois un lien pour regarder et un lien pour télécharger\n3️⃣ Gère tes liens dans 🗂 Mes liens\n\n👥 **Dans les groupes**\nRéponds à un fichier avec /link, ou /link 5 pour cinq fichiers à la suite (jusqu'à {max}). Je dois être administrateur.\n\n⏳ Choisis la durée des liens dans ⚙️ Réglages.",
         "about": "ℹ️ **À propos de Thunder**\n\n🎬 Lecteur en ligne avec pistes audio et sous-titres\n🚀 Téléchargements rapides de toute taille\n🔐 Liens qui expirent ou que tu peux supprimer\n🌍 Disponible en 17 langues\n\nFait avec ❤️ par @TJ_Bots",
         "b_links": "🗂 Mes liens", "b_settings": "⚙️ Réglages", "b_help": "❓ Aide", "b_about": "ℹ️ À propos",
@@ -304,7 +304,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "Ce lien n'existe plus.", "error": "⚠️ Un problème est survenu. Réessaie.",
     },
     "de": {
-        "start": "⚡ **Thunder**\n\nHallo {name}! Schick mir eine beliebige Datei und du bekommst einen Link zum Online-Ansehen und einen zum Herunterladen.\n\n📤 **Schick eine Datei, um zu starten**",
+        "start": "👋 Hallo {name}! Schick mir eine beliebige Datei und du bekommst einen Link zum Online-Ansehen und einen zum Herunterladen.\n\n📤 **Schick eine Datei, um zu starten**",
         "help": "❓ **So funktioniert's**\n\n1️⃣ Schick oder leite mir eine Datei weiter\n2️⃣ Erhalte einen Link zum Ansehen und einen zum Herunterladen\n3️⃣ Verwalte deine Links unter 🗂 Meine Links\n\n👥 **In Gruppen**\nAntworte auf eine Datei mit /link oder /link 5 für fünf Dateien in Folge (bis {max}). Ich muss dort Admin sein.\n\n⏳ Die Gültigkeit der Links wählst du in ⚙️ Einstellungen.",
         "about": "ℹ️ **Über Thunder**\n\n🎬 Online-Player mit Tonspuren und Untertiteln\n🚀 Schnelle Downloads jeder Größe\n🔐 Links, die ablaufen oder gelöscht werden können\n🌍 In 17 Sprachen\n\nMit ❤️ gemacht von @TJ_Bots",
         "b_links": "🗂 Meine Links", "b_settings": "⚙️ Einstellungen", "b_help": "❓ Hilfe", "b_about": "ℹ️ Über",
@@ -336,7 +336,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "Diesen Link gibt es nicht mehr.", "error": "⚠️ Etwas ist schiefgelaufen. Bitte versuch es erneut.",
     },
     "it": {
-        "start": "⚡ **Thunder**\n\nCiao {name}! Mandami qualsiasi file e ti darò un link per guardarlo online e uno per scaricarlo.\n\n📤 **Invia un file per iniziare**",
+        "start": "👋 Ciao {name}! Mandami qualsiasi file e ti darò un link per guardarlo online e uno per scaricarlo.\n\n📤 **Invia un file per iniziare**",
         "help": "❓ **Come funziona**\n\n1️⃣ Inviami o inoltrami qualsiasi file\n2️⃣ Ricevi un link per guardarlo e uno per scaricarlo\n3️⃣ Gestisci i tuoi link in 🗂 I miei link\n\n👥 **Nei gruppi**\nRispondi a un file con /link, oppure /link 5 per cinque file di fila (fino a {max}). Devo essere amministratore.\n\n⏳ Scegli la durata dei link in ⚙️ Impostazioni.",
         "about": "ℹ️ **Info su Thunder**\n\n🎬 Player online con tracce audio e sottotitoli\n🚀 Download veloci di ogni dimensione\n🔐 Link che scadono o che puoi eliminare\n🌍 Disponibile in 17 lingue\n\nFatto con ❤️ da @TJ_Bots",
         "b_links": "🗂 I miei link", "b_settings": "⚙️ Impostazioni", "b_help": "❓ Aiuto", "b_about": "ℹ️ Info",
@@ -368,7 +368,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "Questo link non esiste più.", "error": "⚠️ Qualcosa è andato storto. Riprova.",
     },
     "tr": {
-        "start": "⚡ **Thunder**\n\nMerhaba {name}! Bana herhangi bir dosya gönder; çevrimiçi izlemek için bir bağlantı ve indirmek için bir bağlantı vereyim.\n\n📤 **Başlamak için bir dosya gönder**",
+        "start": "👋 Merhaba {name}! Bana herhangi bir dosya gönder; çevrimiçi izlemek için bir bağlantı ve indirmek için bir bağlantı vereyim.\n\n📤 **Başlamak için bir dosya gönder**",
         "help": "❓ **Nasıl çalışır**\n\n1️⃣ Bana herhangi bir dosya gönder veya ilet\n2️⃣ İzleme ve indirme bağlantılarını al\n3️⃣ Bağlantılarını 🗂 Bağlantılarım bölümünden yönet\n\n👥 **Gruplarda**\nBir dosyaya /link ile yanıt ver, art arda beş dosya için /link 5 (en fazla {max}). Orada yönetici olmam gerekir.\n\n⏳ Bağlantı süresini ⚙️ Ayarlar'dan seç.",
         "about": "ℹ️ **Thunder hakkında**\n\n🎬 Ses parçaları ve altyazılı çevrimiçi oynatıcı\n🚀 Her boyutta hızlı indirme\n🔐 Süresi dolan veya silebileceğin bağlantılar\n🌍 17 dilde\n\n@TJ_Bots tarafından ❤️ ile yapıldı",
         "b_links": "🗂 Bağlantılarım", "b_settings": "⚙️ Ayarlar", "b_help": "❓ Yardım", "b_about": "ℹ️ Hakkında",
@@ -400,7 +400,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "Bu bağlantı artık yok.", "error": "⚠️ Bir şeyler ters gitti. Tekrar dene.",
     },
     "id": {
-        "start": "⚡ **Thunder**\n\nHai {name}! Kirim file apa saja dan aku akan memberimu tautan untuk menonton online dan tautan untuk mengunduh.\n\n📤 **Kirim file untuk mulai**",
+        "start": "👋 Hai {name}! Kirim file apa saja dan aku akan memberimu tautan untuk menonton online dan tautan untuk mengunduh.\n\n📤 **Kirim file untuk mulai**",
         "help": "❓ **Cara kerja**\n\n1️⃣ Kirim atau teruskan file apa saja\n2️⃣ Dapatkan tautan tonton dan tautan unduh\n3️⃣ Kelola tautanmu di 🗂 Tautanku\n\n👥 **Di grup**\nBalas file dengan /link, atau /link 5 untuk lima file berturut-turut (maks {max}). Aku harus menjadi admin.\n\n⏳ Pilih masa berlaku tautan di ⚙️ Pengaturan.",
         "about": "ℹ️ **Tentang Thunder**\n\n🎬 Pemutar online dengan trek audio dan subtitle\n🚀 Unduhan cepat untuk ukuran apa pun\n🔐 Tautan yang kedaluwarsa atau bisa kamu hapus\n🌍 Tersedia dalam 17 bahasa\n\nDibuat dengan ❤️ oleh @TJ_Bots",
         "b_links": "🗂 Tautanku", "b_settings": "⚙️ Pengaturan", "b_help": "❓ Bantuan", "b_about": "ℹ️ Tentang",
@@ -432,7 +432,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "Tautan ini sudah tidak ada.", "error": "⚠️ Terjadi kesalahan. Coba lagi.",
     },
     "hi": {
-        "start": "⚡ **Thunder**\n\nनमस्ते {name}! मुझे कोई भी फ़ाइल भेजें, मैं आपको ऑनलाइन देखने और डाउनलोड करने के लिंक दूँगा।\n\n📤 **शुरू करने के लिए एक फ़ाइल भेजें**",
+        "start": "👋 नमस्ते {name}! मुझे कोई भी फ़ाइल भेजें, मैं आपको ऑनलाइन देखने और डाउनलोड करने के लिंक दूँगा।\n\n📤 **शुरू करने के लिए एक फ़ाइल भेजें**",
         "help": "❓ **यह कैसे काम करता है**\n\n1️⃣ मुझे कोई भी फ़ाइल भेजें या फ़ॉरवर्ड करें\n2️⃣ देखने और डाउनलोड करने का लिंक पाएँ\n3️⃣ अपने लिंक 🗂 मेरे लिंक में मैनेज करें\n\n👥 **ग्रुप में**\nफ़ाइल पर /link से जवाब दें, या लगातार पाँच फ़ाइलों के लिए /link 5 (अधिकतम {max})। मुझे वहाँ एडमिन होना चाहिए।\n\n⏳ लिंक की वैधता ⚙️ सेटिंग्स में चुनें।",
         "about": "ℹ️ **Thunder के बारे में**\n\n🎬 ऑडियो ट्रैक और सबटाइटल वाला ऑनलाइन प्लेयर\n🚀 किसी भी साइज़ की तेज़ डाउनलोड\n🔐 एक्सपायर होने वाले या हटाए जा सकने वाले लिंक\n🌍 17 भाषाओं में\n\n@TJ_Bots द्वारा ❤️ से बनाया गया",
         "b_links": "🗂 मेरे लिंक", "b_settings": "⚙️ सेटिंग्स", "b_help": "❓ मदद", "b_about": "ℹ️ परिचय",
@@ -464,7 +464,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "यह लिंक अब मौजूद नहीं है।", "error": "⚠️ कुछ गलत हो गया। फिर से कोशिश करें।",
     },
     "zh": {
-        "start": "⚡ **Thunder**\n\n你好 {name}！发给我任意文件，我会给你在线观看链接和下载链接。\n\n📤 **发送文件即可开始**",
+        "start": "👋 你好 {name}！发给我任意文件，我会给你在线观看链接和下载链接。\n\n📤 **发送文件即可开始**",
         "help": "❓ **使用方法**\n\n1️⃣ 发送或转发任意文件给我\n2️⃣ 获取观看链接和下载链接\n3️⃣ 在 🗂 我的链接 中管理链接\n\n👥 **在群组中**\n回复文件发送 /link，或用 /link 5 连续处理五个文件（最多 {max} 个）。我需要是群管理员。\n\n⏳ 在 ⚙️ 设置 中选择链接有效期。",
         "about": "ℹ️ **关于 Thunder**\n\n🎬 支持多音轨和字幕的在线播放器\n🚀 任意大小的高速下载\n🔐 可过期、可删除的链接\n🌍 支持 17 种语言\n\n由 @TJ_Bots 用 ❤️ 制作",
         "b_links": "🗂 我的链接", "b_settings": "⚙️ 设置", "b_help": "❓ 帮助", "b_about": "ℹ️ 关于",
@@ -496,7 +496,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "此链接已不存在。", "error": "⚠️ 出错了，请重试。",
     },
     "ja": {
-        "start": "⚡ **Thunder**\n\nこんにちは {name} さん！ファイルを送ると、オンライン視聴用とダウンロード用のリンクをお渡しします。\n\n📤 **ファイルを送って始めましょう**",
+        "start": "👋 こんにちは {name} さん！ファイルを送ると、オンライン視聴用とダウンロード用のリンクをお渡しします。\n\n📤 **ファイルを送って始めましょう**",
         "help": "❓ **使い方**\n\n1️⃣ ファイルを送信または転送\n2️⃣ 視聴リンクとダウンロードリンクを受け取る\n3️⃣ 🗂 マイリンク でリンクを管理\n\n👥 **グループでは**\nファイルに /link で返信、連続5ファイルなら /link 5（最大 {max}）。管理者権限が必要です。\n\n⏳ リンクの有効期間は ⚙️ 設定 で選べます。",
         "about": "ℹ️ **Thunder について**\n\n🎬 音声トラック・字幕対応のオンラインプレーヤー\n🚀 どんなサイズでも高速ダウンロード\n🔐 期限付き・削除可能なリンク\n🌍 17 言語に対応\n\n@TJ_Bots が ❤️ を込めて制作",
         "b_links": "🗂 マイリンク", "b_settings": "⚙️ 設定", "b_help": "❓ ヘルプ", "b_about": "ℹ️ 概要",
@@ -528,7 +528,7 @@ T: dict[str, dict[str, str]] = {
         "gone": "このリンクは存在しません。", "error": "⚠️ エラーが発生しました。もう一度お試しください。",
     },
     "ko": {
-        "start": "⚡ **Thunder**\n\n안녕하세요 {name}님! 파일을 보내주시면 온라인 시청 링크와 다운로드 링크를 드려요.\n\n📤 **파일을 보내 시작하세요**",
+        "start": "👋 안녕하세요 {name}님! 파일을 보내주시면 온라인 시청 링크와 다운로드 링크를 드려요.\n\n📤 **파일을 보내 시작하세요**",
         "help": "❓ **사용 방법**\n\n1️⃣ 아무 파일이나 보내거나 전달하세요\n2️⃣ 시청 링크와 다운로드 링크를 받으세요\n3️⃣ 🗂 내 링크 에서 링크를 관리하세요\n\n👥 **그룹에서**\n파일에 /link 로 답장하거나, 연속 다섯 파일은 /link 5 (최대 {max}개). 그룹 관리자 권한이 필요해요.\n\n⏳ 링크 유효 기간은 ⚙️ 설정 에서 고를 수 있어요.",
         "about": "ℹ️ **Thunder 소개**\n\n🎬 오디오 트랙과 자막을 지원하는 온라인 플레이어\n🚀 어떤 크기든 빠른 다운로드\n🔐 만료되거나 삭제할 수 있는 링크\n🌍 17개 언어 지원\n\n@TJ_Bots 가 ❤️ 를 담아 만들었어요",
         "b_links": "🗂 내 링크", "b_settings": "⚙️ 설정", "b_help": "❓ 도움말", "b_about": "ℹ️ 소개",
