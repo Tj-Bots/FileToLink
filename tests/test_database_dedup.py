@@ -60,7 +60,7 @@ def make_db(users_col):
     db.col = users_col
     for name in ("banned_users_col", "banned_channels_col", "token_col",
                  "authorized_users_col", "restart_message_col", "files_col",
-                 "file_ingest_locks_col"):
+                 "file_ingest_locks_col", "links_col", "settings_col"):
         setattr(db, name, FakeCollection())
     return db
 

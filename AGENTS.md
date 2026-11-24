@@ -35,7 +35,8 @@ Thunder/
 │       ├── admin.py         # Owner commands: /users /broadcast /status /stats /restart /log /authorize /deauthorize /listauth /ban /unban /shell /speedtest
 │       ├── callbacks.py     # Inline keyboard handlers
 │       ├── common.py        # User commands: /start /help /about /dc /ping
-│       └── stream.py        # /link (groups), private/channel media handlers
+│       ├── stream.py        # /link (groups), private/channel media handlers
+│       └── user_panel.py    # /settings and /mylinks panels (callbacks in group -1)
 ├── server/
 │   ├── __init__.py          # web_server() — creates aiohttp app with routes
 │   ├── stream_routes.py     # HTTP streaming endpoints

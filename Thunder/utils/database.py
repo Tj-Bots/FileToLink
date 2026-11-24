@@ -27,6 +27,9 @@ class Database:
         self.restart_message_col: AsyncCollection = self.db.restart_message
         self.files_col: AsyncCollection = self.db.files
         self.file_ingest_locks_col: AsyncCollection = self.db.file_ingest_locks
+        # Per-user links (expiry, revocation, "My links") and per-user settings.
+        self.links_col: AsyncCollection = self.db.user_links
+        self.settings_col: AsyncCollection = self.db.user_settings
 
     async def _deduplicate_users(self) -> None:
         pipeline = [
@@ -64,6 +67,12 @@ class Database:
             await self.files_col.create_index("created_at")
             await self.files_col.create_index("last_seen_at")
             await self.file_ingest_locks_col.create_index("expires_at", expireAfterSeconds=0)
+            await self.links_col.create_index("code", unique=True)
+            await self.links_col.create_index([("user_id", 1), ("created_at", -1)])
+            # Expired and deleted links are kept a while (so they show as expired),
+            # then MongoDB drops them on its own.
+            await self.links_col.create_index("purge_at", expireAfterSeconds=0)
+            await self.settings_col.create_index("user_id", unique=True)
 
             logger.debug("Database indexes ensured.")
             return True

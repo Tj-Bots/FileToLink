@@ -21,9 +21,12 @@ from Thunder.utils.database import db
 from Thunder.utils.decorators import (check_banned, get_shortener_status,
                                       require_token)
 from Thunder.utils.force_channel import force_channel_check
+from Thunder.utils import user_links
 from Thunder.utils.logger import logger
 from Thunder.utils.messages import (
-    MSG_BATCH_LINKS_READY, MSG_BUTTON_DOWNLOAD, MSG_BUTTON_START_CHAT,
+    MSG_BATCH_LINKS_READY, MSG_BUTTON_COPY_LINK, MSG_BUTTON_DOWNLOAD,
+    MSG_BUTTON_MY_LINKS, MSG_BUTTON_SETTINGS, MSG_BUTTON_START_CHAT,
+    MSG_LINKS_COMPACT, MSG_VALID_FOREVER, MSG_VALID_UNTIL,
     MSG_BUTTON_STREAM_NOW, MSG_CRITICAL_ERROR, MSG_DM_BATCH_PREFIX,
     MSG_DM_SINGLE_PREFIX, MSG_ERROR_DM_FAILED, MSG_ERROR_INVALID_NUMBER,
     MSG_ERROR_NO_FILE, MSG_ERROR_NOT_ADMIN, MSG_ERROR_NUMBER_RANGE,
@@ -60,11 +63,34 @@ async def fwd_media(m_msg: Message) -> Optional[Message]:
         return None
 
 
-def get_link_buttons(links):
-    return InlineKeyboardMarkup([[
-        InlineKeyboardButton(MSG_BUTTON_STREAM_NOW, url=links['stream_link'], style=enums.ButtonStyle.SUCCESS),
-        InlineKeyboardButton(MSG_BUTTON_DOWNLOAD, url=links['online_link'], style=enums.ButtonStyle.SUCCESS)
-    ]])
+def links_text(links: Dict[str, Any]) -> str:
+    expires_at = links.get('expires_at')
+    validity = (MSG_VALID_UNTIL.format(when=expires_at.strftime('%Y-%m-%d %H:%M'))
+                if expires_at else MSG_VALID_FOREVER)
+    template = MSG_LINKS_COMPACT if links.get('style') == 'compact' else MSG_LINKS
+    return template.format(
+        file_name=links['media_name'],
+        file_size=links['media_size'],
+        validity=validity,
+        download_link=links['online_link'],
+        stream_link=links['stream_link']
+    )
+
+
+def get_link_buttons(links, private: bool = False):
+    rows = [
+        [InlineKeyboardButton(MSG_BUTTON_STREAM_NOW, url=links['stream_link'], style=enums.ButtonStyle.SUCCESS),
+         InlineKeyboardButton(MSG_BUTTON_DOWNLOAD, url=links['online_link'], style=enums.ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(MSG_BUTTON_COPY_LINK, copy_text=links['online_link'])],
+    ]
+    # The panels edit the message they are opened from, so only offer them where
+    # nobody else is reading it.
+    if private:
+        rows.append([
+            InlineKeyboardButton(MSG_BUTTON_MY_LINKS, callback_data="ml:p:0"),
+            InlineKeyboardButton(MSG_BUTTON_SETTINGS, callback_data="st"),
+        ])
+    return InlineKeyboardMarkup(rows)
 
 async def validate_request_common(client: Client, message: Message) -> Optional[bool]:
     if not await check_banned(client, message):
@@ -157,20 +183,14 @@ async def safe_delete_message(message: Message):
 
 async def send_dm_links(bot: Client, user_id: int, links: Dict[str, Any], chat_title: str):
     try:
-        dm_text = MSG_DM_SINGLE_PREFIX.format(chat_title=chat_title) + "\n" + \
-                  MSG_LINKS.format(
-                      file_name=links['media_name'],
-                      file_size=links['media_size'],
-                      download_link=links['online_link'],
-                      stream_link=links['stream_link']
-                  )
+        dm_text = MSG_DM_SINGLE_PREFIX.format(chat_title=chat_title) + "\n" + links_text(links)
         try:
             await bot.send_message(
                 chat_id=user_id,
                 text=dm_text,
                 disable_web_page_preview=True,
                 parse_mode=enums.ParseMode.MARKDOWN,
-                reply_markup=get_link_buttons(links)
+                reply_markup=get_link_buttons(links, private=True)
             )
         except FloodWait as e:
             await asyncio.sleep(e.value)
@@ -179,7 +199,7 @@ async def send_dm_links(bot: Client, user_id: int, links: Dict[str, Any], chat_t
                 text=dm_text,
                 disable_web_page_preview=True,
                 parse_mode=enums.ParseMode.MARKDOWN,
-                reply_markup=get_link_buttons(links)
+                reply_markup=get_link_buttons(links, private=True)
             )
     except Exception as e:
         logger.error(f"Error sending DM to user {user_id}: {e}", exc_info=True)
@@ -188,30 +208,20 @@ async def send_dm_links(bot: Client, user_id: int, links: Dict[str, Any], chat_t
 async def send_link(msg: Message, links: Dict[str, Any]):
     try:
         await msg.reply_text(
-            MSG_LINKS.format(
-                file_name=links['media_name'],
-                file_size=links['media_size'],
-                download_link=links['online_link'],
-                stream_link=links['stream_link']
-            ),
+            links_text(links),
             quote=True,
             parse_mode=enums.ParseMode.MARKDOWN,
             disable_web_page_preview=True,
-            reply_markup=get_link_buttons(links)
+            reply_markup=get_link_buttons(links, private=msg.chat.type == enums.ChatType.PRIVATE)
         )
     except FloodWait as e:
         await asyncio.sleep(e.value)
         await msg.reply_text(
-            MSG_LINKS.format(
-                file_name=links['media_name'],
-                file_size=links['media_size'],
-                download_link=links['online_link'],
-                stream_link=links['stream_link']
-            ),
+            links_text(links),
             quote=True,
             parse_mode=enums.ParseMode.MARKDOWN,
             disable_web_page_preview=True,
-            reply_markup=get_link_buttons(links)
+            reply_markup=get_link_buttons(links, private=msg.chat.type == enums.ChatType.PRIVATE)
         )
 
 
@@ -455,6 +465,7 @@ async def process_single(
         if reused_existing and stored_msg:
             await safe_delete_message(stored_msg)
             stored_msg = None
+        log_links = None
         if canonical_record:
             links = await gen_canonical_links(
                 file_name=canonical_record["file_name"],
@@ -463,6 +474,16 @@ async def process_single(
                 shortener=shortener_val
             )
             canonical_reply_id = int(canonical_record["canonical_message_id"])
+            # The requester gets a personal link (their lifetime, revocable); the
+            # log channel keeps the shared canonical one.
+            requester = (original_request_msg or msg).from_user
+            if requester:
+                try:
+                    user_view = await user_links.personal_links(requester.id, canonical_record, shortener_val)
+                    log_links, links = links, user_view
+                except Exception as e:
+                    logger.error(f"Personal link failed for {requester.id}, sending the shared link: {e}",
+                                 exc_info=True)
         else:
             if not stored_msg:
                 stored_msg = await fwd_media(file_msg)
@@ -474,15 +495,10 @@ async def process_single(
         if notification_msg:
             result = await safe_edit_message(
                 notification_msg,
-                MSG_LINKS.format(
-                    file_name=links['media_name'],
-                    file_size=links['media_size'],
-                    download_link=links['online_link'],
-                    stream_link=links['stream_link']
-                ),
+                links_text(links),
                 parse_mode=enums.ParseMode.MARKDOWN,
                 disable_web_page_preview=True,
-                reply_markup=get_link_buttons(links)
+                reply_markup=get_link_buttons(links, private=msg.chat.type == enums.ChatType.PRIVATE)
             )
             if not result:
                 await send_link(msg, links)
@@ -504,7 +520,7 @@ async def process_single(
         if source_info and source_id:
             try:
                 await send_channel_links(
-                    links,
+                    log_links or links,
                     source_info,
                     source_id,
                     target_msg=stored_msg,
@@ -513,7 +529,7 @@ async def process_single(
             except FloodWait as e:
                 await asyncio.sleep(e.value)
                 await send_channel_links(
-                    links,
+                    log_links or links,
                     source_info,
                     source_id,
                     target_msg=stored_msg,

@@ -14,6 +14,8 @@ def get_commands():
         "ping": "Check the bot's status and response time",
         "about": "Get information about the bot",
         "help": "Show help and usage instructions",
+        "settings": "Choose link lifetime and message style",
+        "mylinks": "See, extend or delete your links",
         "status": "(Admin) View bot details and current workload",
         "stats": "(Admin) View usage statistics and resource consumption",
         "broadcast": "(Admin) Send a message to all users",

@@ -136,63 +136,71 @@ MSG_LOG_FILE_MISSING = "⚠️ **Log File Missing:** Could not find the log file
 
 # BUTTON TEXTS (User-facing)
 
-MSG_BUTTON_STREAM_NOW = "🖥️ Stream"
+MSG_BUTTON_STREAM_NOW = "🎬 Watch"
 MSG_BUTTON_DOWNLOAD = "🚀 Download"
-MSG_BUTTON_GET_HELP = "📖 Get Help"
+MSG_BUTTON_GET_HELP = "📖 Help"
 MSG_BUTTON_CANCEL_BROADCAST = "🛑 Cancel Broadcast"
 MSG_BUTTON_VIEW_PROFILE = "👤 View User Profile"
-MSG_BUTTON_ABOUT = "ℹ️ About Bot"
+MSG_BUTTON_ABOUT = "ℹ️ About"
 MSG_BUTTON_JOIN_CHANNEL = "🔊 {channel_title}"
 MSG_BUTTON_GITHUB = "🛠️ GitHub"
 MSG_BUTTON_START_CHAT = "📩 Start Chat"
 MSG_BUTTON_CLOSE = "✖ Close"
 MSG_BUTTON_BACK = "🔙 Back"
+MSG_BUTTON_SETTINGS = "⚙️ Settings"
+MSG_BUTTON_MY_LINKS = "🗂 My Links"
+MSG_BUTTON_COPY_LINK = "📋 Copy link"
+MSG_BUTTON_CHANNEL = "📢 Updates channel"
 
 
 # COMMAND RESPONSES (User-facing)
 
 MSG_WELCOME = (
-    "🌟 **Welcome, {user_name}!** 🌟\n\n"
-    "> I'm **Thunder File to Link Bot** ⚡\n"
-    "> I generate direct download and streaming links for your files.\n\n"
-    "**How to use:**\n"
-    "> 1. Send any file to me for private links.\n"
-    "> 2. In groups, reply to a file with `/link`."
+    "⚡ **Hey {user_name}, welcome to Thunder!**\n\n"
+    "> Send me any file and I'll turn it into a **direct download link** "
+    "and a **watch-online page**, in seconds.\n\n"
+    "**What you get**\n"
+    "🎬 Watch in the browser, with audio tracks and subtitles\n"
+    "🚀 Fast, resumable downloads of any size\n"
+    "⏳ Links that last forever, or only as long as you choose\n"
+    "🗂 A list of your links to extend or delete at any time\n\n"
+    "👇 **Send a file to get started.**"
 )
 
 MSG_HELP = (
-    "📘 **Thunder Bot - Help Guide** 📖\n\n"
-    "**🚀 Private Chat (with me):**\n"
-    "> 1. Send me **any file** (document, video, audio, photo, etc.).\n"
-    "> 2. I'll instantly reply with your links! ⚡\n\n"
-    "**👥 Using in Groups:**\n"
-    "> • Reply to any file with `/link`.\n"
-    "> • **Batch Mode:** Reply to the **first** file with `/link <number>` (e.g., `/link 5` for 5 files, up to {max_files}).\n"
-    "> • Bot needs administrator rights in the group to function.\n\n"
-    "**⚙️ Available Commands:**\n"
-    "> `/start` 👋 - Welcome message & quick start information.\n"
-    "> `/help` 📖 - Shows this help message.\n"
-    "> `/link <num>` 🔗 - (Groups) Generate links.\n"
-    "> `/about` ℹ️ - Learn more about me and my features.\n"
-    "> `/ping` 📡 - Check my responsiveness and online status.\n"
-    "> `/dc` 🌍 - View DC information (for yourself, another user, or a file).\n\n"
-    "💡 You can forward files from other chats directly to me."
+    "📖 **How to use Thunder**\n\n"
+    "**💬 In private**\n"
+    "> Send or forward me any file: video, audio, document or photo. "
+    "I reply with a watch link and a download link.\n\n"
+    "**👥 In groups**\n"
+    "> Reply to a file with `/link`.\n"
+    "> For several files in a row, reply to the **first** one with `/link 5` "
+    "(up to {max_files}). I need to be an admin there.\n\n"
+    "**⏳ Link lifetime**\n"
+    "> In /settings choose how long new links work: 24 hours, 7 days, "
+    "30 days or forever.\n\n"
+    "**🗂 Your links**\n"
+    "> /mylinks lists everything you created. Open a link to extend it or "
+    "delete it, so it stops working right away.\n\n"
+    "**⌨️ Commands**\n"
+    "> /start · welcome\n"
+    "> /settings · your preferences\n"
+    "> /mylinks · manage your links\n"
+    "> /link · (groups) make links\n"
+    "> /ping · is the bot online\n"
+    "> /about · about the bot"
 )
 
 MSG_ABOUT = (
-    "🌟 **About Thunder File to Link Bot** ℹ️\n\n"
-    "I'm your go-to bot for **instant download & streaming!** ⚡\n\n"
-    "**🚀 Key Features:**\n"
-    "> **Instant Links:** Get your links within seconds.\n"
-    "> **Online Streaming:** Watch videos or listen to audio directly (for supported formats).\n"
-    "> **Universal File Support:** Handles documents, videos, audio, photos, and more.\n"
-    "> **High-Speed Access:** Optimized for fast link generation and file access.\n"
-    "> **Secure & Reliable:** Your files are handled with care during processing.\n"
-    "> **User-Friendly Interface:** Designed for ease of use on any device.\n"
-    "> **Efficient Processing:** Built for speed and reliability.\n"
-    "> **Batch Mode:** Process multiple files at once in groups using `/link <number>`.\n"
-    "> **Versatile Usage:** Works in private chats, groups, and channels (with admin setup).\n\n"
-    "💖 If you find me useful, please consider sharing me with your friends!"
+    "⚡ **Thunder File to Link**\n\n"
+    "> Turns Telegram files into fast links you can watch or download "
+    "anywhere, without saving them to your phone first.\n\n"
+    "**Under the hood**\n"
+    "🎬 In-browser player: MKV, HEVC, multiple audio tracks, subtitles\n"
+    "🚀 Parallel streaming straight from Telegram\n"
+    "🌍 Watch page in 17 languages\n"
+    "🔐 Personal links you can expire or revoke\n\n"
+    "💙 Made by @TJ_Bots. If the bot helps you, share it with a friend!"
 )
 
 # Ping
@@ -224,14 +232,20 @@ MSG_DC_UNKNOWN = "Unknown"
 # File Link Generation
 MSG_DM_SINGLE_PREFIX = "📬 **From {chat_title}**\n"
 MSG_LINKS = (
-    "✨ **Your Links are Ready!** ✨\n\n"
-    "> `{file_name} ({file_size})`\n\n"
-    "🚀 **Download Link:**\n"
-    "> {download_link}\n\n"
-    "🖥️ **Stream Link:**\n"
+    "✅ **Your link is ready!**\n\n"
+    "📄 `{file_name}`\n"
+    "💾 {file_size}  ·  ⏳ {validity}\n\n"
+    "🎬 **Watch online**\n"
     "> {stream_link}\n\n"
-    "⌛️ **Note: Links remain active while the bot is running and the file is accessible.**"
+    "🚀 **Direct download**\n"
+    "> {download_link}"
 )
+MSG_LINKS_COMPACT = (
+    "✅ `{file_name}`\n"
+    "💾 {file_size}  ·  ⏳ {validity}"
+)
+MSG_VALID_FOREVER = "never expires"
+MSG_VALID_UNTIL = "valid until {when} UTC"
 
 # USER NOTIFICATIONS
 
@@ -385,3 +399,54 @@ MSG_SYSTEM_STATS = (
 )
 
 MSG_DB_STATS = "📊 **Database Statistics**\n\n> 👥 **Total Users:** `{total_users}`"
+
+
+# USER SETTINGS & MY LINKS
+
+MSG_SETTINGS = (
+    "⚙️ **Your settings**\n\n"
+    "⏳ **Link lifetime:** {ttl}\n"
+    "> How long the links you create from now on keep working.\n\n"
+    "🧾 **Message style:** {style}\n"
+    "> Full shows the links in the message. Compact keeps only the buttons.\n\n"
+    "🗂 **Save to My Links:** {history}\n"
+    "> Keep a list of your links so you can extend or delete them later."
+)
+MSG_TTL_NAMES = {"24h": "24 hours", "7d": "7 days", "30d": "30 days", "forever": "Forever"}
+MSG_STYLE_NAMES = {"full": "Full", "compact": "Compact"}
+MSG_ON = "On"
+MSG_OFF = "Off"
+MSG_SETTING_SAVED = "✅ Saved"
+
+MSG_MYLINKS_EMPTY = (
+    "🗂 **My Links**\n\n"
+    "> You have no saved links yet.\n"
+    "> Send me a file and it will show up here."
+)
+MSG_MYLINKS_HEADER = "🗂 **My Links** · {total} total · page {page}/{pages}\n\n"
+MSG_MYLINKS_ITEM = "**{n}.** `{name}`\n> 💾 {size}  ·  {status}\n\n"
+MSG_LINK_STATUS_FOREVER = "♾ forever"
+MSG_LINK_STATUS_LEFT = "⏳ {left} left"
+MSG_LINK_STATUS_EXPIRED = "⛔ expired"
+MSG_LINK_DETAILS = (
+    "🔗 **Link details**\n\n"
+    "📄 `{name}`\n"
+    "💾 {size}\n"
+    "📅 Created {created} UTC\n"
+    "{status}\n\n"
+    "{links}"
+)
+MSG_LINK_DETAILS_LINKS = "🎬 **Watch:** {watch}\n🚀 **Download:** {download}"
+MSG_LINK_DETAILS_DEAD = "> This link no longer works. Extend it to bring it back."
+MSG_LINK_DELETE_CONFIRM = "🗑 **Delete this link?**\n\n📄 `{name}`\n\n> Anyone who has it will lose access right away."
+MSG_LINK_DELETED = "🗑 Link deleted"
+MSG_LINK_EXTENDED = "⏳ Link extended"
+MSG_LINK_NOT_FOUND = "This link no longer exists."
+MSG_EXPIRED_CLEARED = "🧹 Removed {count} expired link(s)"
+MSG_BUTTON_EXTEND = "⏳ Extend:"
+MSG_BUTTON_HISTORY = "🗂 Save to My Links: {state}"
+MSG_BUTTON_DELETE = "🗑 Delete link"
+MSG_BUTTON_CONFIRM_DELETE = "🗑 Yes, delete"
+MSG_BUTTON_CANCEL = "Cancel"
+MSG_BUTTON_CLEAR_EXPIRED = "🧹 Clear expired"
+MSG_BUTTON_BACK_TO_LIST = "🔙 Back to list"

@@ -11,8 +11,9 @@ from pyrogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
                             Message, User)
 
 from Thunder.bot import StreamBot
-from Thunder.utils.bot_utils import (build_welcome, gen_dc_txt, get_user,
-                                     log_newusr, reply_user_err)
+from Thunder.utils.bot_utils import (about_keyboard, build_welcome, gen_dc_txt,
+                                     get_user, help_keyboard, log_newusr,
+                                     reply_user_err)
 from Thunder.utils.database import db
 from Thunder.utils.decorators import check_banned
 from Thunder.utils.file_properties import get_fname, get_fsize, parse_fid
@@ -20,7 +21,7 @@ from Thunder.utils.force_channel import force_channel_check, get_force_info
 from Thunder.utils.human_readable import humanbytes
 from Thunder.utils.logger import logger
 from Thunder.utils.messages import (
-    MSG_ABOUT, MSG_BUTTON_ABOUT, MSG_BUTTON_BACK, MSG_BUTTON_CLOSE,
+    MSG_ABOUT, MSG_BUTTON_CLOSE,
     MSG_BUTTON_GET_HELP, MSG_BUTTON_JOIN_CHANNEL,
     MSG_BUTTON_VIEW_PROFILE, MSG_DC_ANON_ERROR,
     MSG_DC_FILE_ERROR, MSG_DC_FILE_INFO, MSG_DC_INVALID_USAGE, MSG_DC_UNKNOWN,
@@ -110,21 +111,15 @@ async def help_command(bot: Client, msg: Message):
         await log_newusr(bot, msg.from_user.id, msg.from_user.first_name)
 
     txt = MSG_HELP.format(max_files=Var.MAX_BATCH_FILES)
-    btns = [[InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command", style=ButtonStyle.PRIMARY)]]
-
     link, title = await get_force_info(bot)
-    if link:
-        btns.append([InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link, style=ButtonStyle.SUCCESS)])
-
-    btns.append([
-        InlineKeyboardButton(MSG_BUTTON_BACK, callback_data="back_to_start", style=ButtonStyle.PRIMARY),
-        InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)
-    ])
+    force = ([InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link, style=ButtonStyle.SUCCESS)]
+             if link else None)
+    markup = help_keyboard(force)
     try:
-        await msg.reply_text(text=txt, reply_markup=InlineKeyboardMarkup(btns), quote=True)
+        await msg.reply_text(text=txt, reply_markup=markup, quote=True)
     except FloodWait as e:
         await asyncio.sleep(e.value)
-        await msg.reply_text(text=txt, reply_markup=InlineKeyboardMarkup(btns), quote=True)
+        await msg.reply_text(text=txt, reply_markup=markup, quote=True)
 
 @StreamBot.on_message(filters.command("about") & filters.private)
 async def about_command(bot: Client, msg: Message):
@@ -133,17 +128,11 @@ async def about_command(bot: Client, msg: Message):
     if msg.from_user:
         await log_newusr(bot, msg.from_user.id, msg.from_user.first_name)
 
-    btns = [
-        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command", style=ButtonStyle.PRIMARY)],
-        [InlineKeyboardButton(MSG_BUTTON_BACK, callback_data="back_to_start", style=ButtonStyle.PRIMARY),
-         InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)]
-    ]
-
     try:
-        await msg.reply_text(text=MSG_ABOUT, reply_markup=InlineKeyboardMarkup(btns), quote=True)
+        await msg.reply_text(text=MSG_ABOUT, reply_markup=about_keyboard(), quote=True)
     except FloodWait as e:
         await asyncio.sleep(e.value)
-        await msg.reply_text(text=MSG_ABOUT, reply_markup=InlineKeyboardMarkup(btns), quote=True)
+        await msg.reply_text(text=MSG_ABOUT, reply_markup=about_keyboard(), quote=True)
 
 async def send_user_dc(msg: Message, user: User):
     txt = await gen_dc_txt(user)

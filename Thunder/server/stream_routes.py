@@ -33,6 +33,7 @@ from Thunder.utils.mkv_subtitles import (
     WINDOW_MS, MkvIndex, extract_subtitle_window, load_index, read_chunk_range,
     subtitle_track_indexed,
 )
+from Thunder.utils import user_links
 from Thunder.utils.render_template import render_media_page, render_page
 from Thunder.utils.time_format import get_readable_time
 from Thunder.vars import Var
@@ -408,6 +409,74 @@ async def media_options(request: web.Request):
     })
 
 
+async def _preview_response(file_record: dict, src: str) -> web.Response:
+    """The watch page for a stored file, playing from `src` (its download URL)."""
+    file_name = file_record.get("file_name") or "file"
+    rendered_page = await render_media_page(
+        file_name,
+        f"{src}?disposition=inline",
+        mime_type=file_record.get("mime_type") or "application/octet-stream",
+        file_size=int(file_record.get("file_size") or 0),
+    )
+    response = web.Response(
+        text=rendered_page,
+        content_type='text/html',
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Range, Content-Type, *",
+            "X-Content-Type-Options": "nosniff",
+        }
+    )
+    response.enable_compression()
+    return response
+
+
+_LINK_GONE_PAGE = """<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}</title>
+<style>body{{margin:0;min-height:100vh;display:grid;place-items:center;background:#070910;color:#f1f4fa;
+font:16px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;text-align:center;padding:24px;box-sizing:border-box}}
+.card{{max-width:420px;padding:32px 26px;border-radius:22px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}}
+img{{width:72px;height:72px;border-radius:18px;box-shadow:0 10px 30px rgba(255,77,13,.4)}}
+h1{{font-size:21px;margin:18px 0 8px}}p{{color:#9aa3b5;margin:0}}</style></head>
+<body><div class="card"><img src="/assets/logo.png" alt=""><h1>{title}</h1><p>{text}</p></div></body></html>"""
+
+
+def _link_gone(state: str) -> web.Response:
+    if state == "expired":
+        title, text = "This link has expired", "Ask the person who shared it for a new link."
+    else:
+        title, text = "This link is not available", "It was deleted by its owner, or it never existed."
+    return web.Response(status=410 if state == "expired" else 404,
+                        text=_LINK_GONE_PAGE.format(title=title, text=text),
+                        content_type="text/html", headers={"Cache-Control": "no-store"})
+
+
+async def _personal_file(code: str):
+    """(link, file_record) for a live personal link, or an HTTP response to return."""
+    link, state = await user_links.resolve(code)
+    if state != "ok":
+        return None, None, _link_gone(state)
+    file_record = await get_file_by_hash(link["public_hash"], raise_on_error=False)
+    if not file_record:
+        return None, None, _link_gone("missing")
+    return link, file_record, None
+
+
+@routes.get(r"/watch/l/{code}/{name:.+}", allow_head=True)
+async def personal_media_preview(request: web.Request):
+    try:
+        link, file_record, gone = await _personal_file(request.match_info["code"])
+        if gone is not None:
+            return gone
+        file_name = file_record.get("file_name") or "file"
+        src = f"{Var.URL.rstrip('/')}/l/{link['code']}/{quote_media_name(file_name)}"
+        return await _preview_response(file_record, src)
+    except Exception as e:
+        error_id = secrets.token_hex(6)
+        logger.error(f"Personal preview error {error_id}: {e}", exc_info=True)
+        raise web.HTTPInternalServerError(text=f"Server error occurred: {error_id}") from e
+
+
 @routes.get(r"/watch/f/{secure_hash}/{name:.+}", allow_head=True)
 async def canonical_media_preview(request: web.Request):
     try:
@@ -418,24 +487,7 @@ async def canonical_media_preview(request: web.Request):
 
         file_name = file_record.get("file_name") or f"file_{secure_hash}"
         src = f"{Var.URL.rstrip('/')}/f/{secure_hash}/{quote_media_name(file_name)}"
-        rendered_page = await render_media_page(
-            file_name,
-            f"{src}?disposition=inline",
-            mime_type=file_record.get("mime_type") or "application/octet-stream",
-            file_size=int(file_record.get("file_size") or 0),
-        )
-
-        response = web.Response(
-            text=rendered_page,
-            content_type='text/html',
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "Range, Content-Type, *",
-                "X-Content-Type-Options": "nosniff",
-            }
-        )
-        response.enable_compression()
-        return response
+        return await _preview_response(file_record, src)
     except (InvalidHash, FileNotFound) as e:
         logger.debug(f"Canonical preview error: {type(e).__name__} - {e}", exc_info=True)
         raise web.HTTPNotFound(text="Resource not found") from e
@@ -478,11 +530,24 @@ async def media_preview(request: web.Request):
             text=f"Server error occurred: {error_id}") from e
 
 
+@routes.get(r"/l/{code}/{name:.+}", allow_head=True)
+async def personal_media_delivery(request: web.Request):
+    link, file_record, gone = await _personal_file(request.match_info["code"])
+    if gone is not None:
+        return gone
+    return await _deliver_canonical(request, file_record["public_hash"], file_record)
+
+
 @routes.get(r"/f/{secure_hash}/{name:.+}", allow_head=True)
 async def canonical_media_delivery(request: web.Request):
+    return await _deliver_canonical(request, request.match_info["secure_hash"])
+
+
+async def _deliver_canonical(request: web.Request, secure_hash: str, file_record: dict | None = None):
     try:
-        secure_hash = validate_public_hash(request.match_info["secure_hash"])
-        file_record = await get_file_by_hash(secure_hash, raise_on_error=False)
+        secure_hash = validate_public_hash(secure_hash)
+        if file_record is None:
+            file_record = await get_file_by_hash(secure_hash, raise_on_error=False)
         if not file_record:
             raise FileNotFound("Canonical file not found")
 

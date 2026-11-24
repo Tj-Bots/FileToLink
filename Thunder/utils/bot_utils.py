@@ -19,8 +19,10 @@ from Thunder.utils.file_properties import get_fname, get_fsize, get_hash
 from Thunder.utils.force_channel import get_force_info
 from Thunder.utils.human_readable import humanbytes
 from Thunder.utils.logger import logger
-from Thunder.utils.messages import (MSG_BUTTON_ABOUT, MSG_BUTTON_CLOSE,
-                                    MSG_BUTTON_GET_HELP,
+from Thunder.utils.messages import (MSG_BUTTON_ABOUT, MSG_BUTTON_BACK,
+                                    MSG_BUTTON_CHANNEL, MSG_BUTTON_CLOSE,
+                                    MSG_BUTTON_GET_HELP, MSG_BUTTON_MY_LINKS,
+                                    MSG_BUTTON_SETTINGS,
                                     MSG_BUTTON_JOIN_CHANNEL, MSG_DC_UNKNOWN,
                                     MSG_DC_USER_INFO, MSG_NEW_USER,
                                     MSG_WELCOME)
@@ -33,8 +35,10 @@ async def build_welcome(bot: Client, user_name: str):
     link, title = await get_force_info(bot)
 
     btns = [
-        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command", style=ButtonStyle.PRIMARY),
-         InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command", style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(MSG_BUTTON_SETTINGS, callback_data="st", style=ButtonStyle.PRIMARY),
+         InlineKeyboardButton(MSG_BUTTON_MY_LINKS, callback_data="ml:p:0", style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command"),
+         InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command")],
         [InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)]
     ]
 
@@ -42,6 +46,33 @@ async def build_welcome(bot: Client, user_name: str):
         btns.insert(0, [InlineKeyboardButton(MSG_BUTTON_JOIN_CHANNEL.format(channel_title=title), url=link, style=ButtonStyle.SUCCESS)])
 
     return txt, InlineKeyboardMarkup(btns)
+
+
+UPDATES_CHANNEL_URL = "https://t.me/TJ_Bots"
+
+
+def help_keyboard(force_button=None) -> InlineKeyboardMarkup:
+    rows = [
+        [InlineKeyboardButton(MSG_BUTTON_SETTINGS, callback_data="st", style=ButtonStyle.PRIMARY),
+         InlineKeyboardButton(MSG_BUTTON_MY_LINKS, callback_data="ml:p:0", style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command")],
+    ]
+    if force_button:
+        rows.append(force_button)
+    rows.append([
+        InlineKeyboardButton(MSG_BUTTON_BACK, callback_data="back_to_start"),
+        InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER),
+    ])
+    return InlineKeyboardMarkup(rows)
+
+
+def about_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command"),
+         InlineKeyboardButton(MSG_BUTTON_CHANNEL, url=UPDATES_CHANNEL_URL, style=ButtonStyle.SUCCESS)],
+        [InlineKeyboardButton(MSG_BUTTON_BACK, callback_data="back_to_start"),
+         InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel", style=ButtonStyle.DANGER)],
+    ])
 
 
 def quote_media_name(file_name: str) -> str:
