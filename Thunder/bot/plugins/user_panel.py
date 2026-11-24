@@ -179,7 +179,6 @@ async def _list_view(lang: str, uid: int, page: int):
     total = await db.links_col.count_documents(query)
     if total == 0:
         return tr(lang, "links_empty"), InlineKeyboardMarkup([
-            [B(tr(lang, "b_settings"), callback_data="st")],
             [B(tr(lang, "b_back"), callback_data="back_to_start")],
         ])
     pages = max(1, math.ceil(total / PER_PAGE))
@@ -196,8 +195,7 @@ async def _list_view(lang: str, uid: int, page: int):
         {**query, "expires_at": {"$ne": None, "$lte": _now()}})
     if expired:
         rows.append([B(tr(lang, "b_clear"), callback_data="ml:c")])
-    rows.append([B(tr(lang, "b_settings"), callback_data="st"),
-                 B(tr(lang, "b_back"), callback_data="back_to_start")])
+    rows.append([B(tr(lang, "b_back"), callback_data="back_to_start")])
     return tr(lang, "links", n=total), InlineKeyboardMarkup(rows)
 
 
