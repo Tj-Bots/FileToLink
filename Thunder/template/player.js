@@ -78,6 +78,24 @@
         : (/iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) ? 'ios'
             : 'desktop';
 
+    // ------------------------------------------------------------ page effects
+    const topbar = $('topbar');
+    const onScroll = () => topbar?.classList.toggle('scrolled', window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    // Material-style press wave on every page button.
+    document.addEventListener('pointerdown', (e) => {
+        const btn = e.target.closest('.btn, .quick-btn');
+        if (!btn) return;
+        const r = btn.getBoundingClientRect();
+        const size = Math.max(r.width, r.height);
+        const w = document.createElement('span');
+        w.className = 'wave';
+        w.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - r.left - size / 2}px;top:${e.clientY - r.top - size / 2}px`;
+        btn.appendChild(w);
+        setTimeout(() => w.remove(), 650);
+    });
+
     // ------------------------------------------------------------ page actions
     const copyBtn = $('copyBtn');
     copyBtn?.addEventListener('click', async () => {
@@ -143,6 +161,19 @@
         toastTimer = setTimeout(() => { ui.toast.hidden = true; }, 2000);
     };
 
+    const ICONS = {
+        play: '<svg viewBox="0 0 24 24"><path d="M8 5.14v13.72a1 1 0 001.5.86l11-6.86a1 1 0 000-1.72l-11-6.86A1 1 0 008 5.14z"/></svg>',
+        pause: '<svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>',
+    };
+    const osdEl = $('osd');
+    const osd = (content, isText) => {
+        osdEl.classList.remove('go');
+        osdEl.classList.toggle('text', !!isText);
+        if (isText) osdEl.textContent = content; else osdEl.innerHTML = content;
+        void osdEl.offsetWidth;
+        osdEl.classList.add('go');
+    };
+
     // --- state
     let duration = 0;
     let loading = true;
@@ -155,7 +186,9 @@
     const setLoading = (on) => { loading = on; setState(); };
 
     const play = () => { const p = el.play?.(); if (p?.catch) p.catch(() => {}); };
-    const togglePlay = () => { if (el.paused) play(); else el.pause(); };
+    const togglePlay = () => {
+        if (el.paused) { play(); osd(ICONS.play); } else { el.pause(); osd(ICONS.pause); }
+    };
     const seekTo = (s) => {
         if (!duration) return;
         el.currentTime = Math.max(0, Math.min(duration - 0.25, s));
@@ -307,10 +340,14 @@
     });
 
     // --- gestures (tap / double-tap / long-press)
+    // Repeated taps on the same side stack up (-10, -20, -30 …) like YouTube.
     const flash = (node) => {
+        const sign = node === ui.rippleBack ? -1 : 1;
+        node._n = node.classList.contains('show') ? (node._n || 0) + 10 : 10;
+        node.querySelector('span').textContent = `${sign < 0 ? '-' : '+'}${node._n}`;
         node.classList.add('show');
         clearTimeout(node._t);
-        node._t = setTimeout(() => node.classList.remove('show'), 450);
+        node._t = setTimeout(() => { node.classList.remove('show'); node._n = 0; }, 650);
     };
     let tapTimer = null;
     let lastTap = { time: 0, zone: '' };
@@ -403,8 +440,8 @@
         const handled = {
             ' ': togglePlay, k: togglePlay, f: toggleFs, m: () => { el.muted = !el.muted; },
             arrowleft: () => seekBy(-5), arrowright: () => seekBy(5), j: () => seekBy(-10), l: () => seekBy(10),
-            arrowup: () => { el.volume = Math.min(1, (el.volume || 0) + 0.1); },
-            arrowdown: () => { el.volume = Math.max(0, (el.volume || 0) - 0.1); },
+            arrowup: () => { el.volume = Math.min(1, (el.volume || 0) + 0.1); osd(`${Math.round(el.volume * 100)}%`, true); },
+            arrowdown: () => { el.volume = Math.max(0, (el.volume || 0) - 0.1); osd(`${Math.round(el.volume * 100)}%`, true); },
             escape: () => { if (sheetOpen()) closeSheets(); else if (isFs() && !fsEl()) exitFs(); },
         }[k];
         if (!handled) return;
@@ -451,6 +488,10 @@
         });
     });
     ui.tracks.addEventListener('click', () => { renderTracks(); openSheet('tracksSheet'); });
+    ['qAudio', 'qSubs'].forEach((id) => $(id)?.addEventListener('click', () => {
+        renderTracks(); openSheet('tracksSheet');
+        stage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }));
     ui.settings.addEventListener('click', () => { renderSettings(); openSheet('settingsSheet'); });
     ui.speedBtn.addEventListener('click', () => { renderSettings(); openSheet('settingsSheet'); });
     $('subStyleBtn').addEventListener('click', () => { reflectSubPrefs(); openSheet('subStyleSheet'); });
@@ -475,7 +516,7 @@
         const sp = $('speedOptions');
         sp.replaceChildren(...SPEEDS.map((r) => chip(r === 1 ? t('normalSpeed') : `${r}x`,
             Math.abs((boosting ? boostPrevRate : el.playbackRate) - r) < 0.01,
-            () => { el.playbackRate = r; renderSettings(); })));
+            () => { el.playbackRate = r; osd(`${r}x`, true); renderSettings(); })));
         const sl = $('sleepOptions');
         sl.replaceChildren(...[0, 15, 30, 45, 60, 90].map((m) => chip(sleepLabel(m), m === sleepMinutes, () => {
             sleepMinutes = m;
@@ -571,6 +612,17 @@
             }));
         }
         ui.subDot.hidden = subTrackId == null;
+
+        const qa = $('qAudioVal'), qs = $('qSubsVal');
+        if (qa) {
+            const act = activeAudioId();
+            const i = Math.max(0, audio.findIndex((a) => a.id === act));
+            qa.textContent = audio.length ? trackLabel(audio[i], i).main : '—';
+        }
+        if (qs) {
+            const i = subs.findIndex((x) => x.id === subTrackId);
+            qs.textContent = i >= 0 ? trackLabel(subs[i], i).main : (subs.length ? t('off') : '—');
+        }
     };
     const selectAudio = (id) => {
         try { engine()?.selectAudioTrack(id); } catch { /* ignore */ }
@@ -695,15 +747,23 @@
 
     // ------------------------------------------------------------ engine events
     el.classList.add('own-subs');
+    if (CFG.isVideo) stage.classList.add('no-frame');
+    // Ambient glow from the picture itself: desktop only, it costs a sample per frame.
+    if (CFG.isVideo && window.matchMedia('(min-width: 900px) and (hover: hover)').matches
+        && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        el.setAttribute('ambientwrapper', 'ambient');
+        el.setAttribute('ambientmode', '');
+        $('ambient')?.classList.add('live');
+    }
     const onEvt = (name, fn) => el.addEventListener(name, fn);
     onEvt('play', setState);
     onEvt('pause', () => { setState(); showControls(); });
-    onEvt('playing', () => { setLoading(false); scheduleHide(); });
+    onEvt('playing', () => { stage.classList.remove('no-frame'); setLoading(false); scheduleHide(); });
     onEvt('waiting', () => setLoading(true));
     onEvt('seeking', () => setLoading(true));
     onEvt('seeked', () => setLoading(false));
     onEvt('canplay', () => setLoading(false));
-    onEvt('loadeddata', () => { setLoading(false); setResolution(); hookOverlay(); });
+    onEvt('loadeddata', () => { stage.classList.remove('no-frame'); setLoading(false); setResolution(); hookOverlay(); });
     onEvt('loadedmetadata', () => { setDuration(el.duration); setResolution(); renderTracks(); autoPickSub(); hookOverlay(); });
     onEvt('durationchange', () => setDuration(el.duration));
     onEvt('resize', setResolution);
@@ -729,7 +789,7 @@
     onEvt('error', () => {
         // movi falls back to native <video> on its own; only a final failure lands here.
         setTimeout(() => {
-            if (!(el.duration > 0) && !el.currentTime) { setLoading(false); ui.err.hidden = false; }
+            if (!(el.duration > 0) && !el.currentTime) { stage.classList.remove('no-frame'); setLoading(false); ui.err.hidden = false; }
         }, 1500);
     });
 

@@ -36,9 +36,11 @@
 </head>
 
 <body>
-    <div class="bg-glow" aria-hidden="true"></div>
+    <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="grain" aria-hidden="true"></div>
 
-    <header class="topbar">
+    <header class="topbar" id="topbar">
+      <div class="topbar-in">
         <a class="brand" href="https://t.me/TJ_Bots" target="_blank" rel="noopener noreferrer">
             <img src="{{ logo_url }}" alt="" width="32" height="32">
             <span>TJ Bots</span>
@@ -47,12 +49,15 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm6.93 6h-2.95a15.7 15.7 0 00-1.38-3.56A8.03 8.03 0 0118.93 8zM12 4.04c.83 1.2 1.480 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14a8.2 8.2 0 010-4h3.38a16.5 16.5 0 000 4H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A8 8 0 015.08 16zm2.95-8H5.08a8 8 0 014.33-3.56A15.7 15.7 0 008.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.960h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66a14.7 14.7 0 010-4h4.68a14.7 14.7 0 010 4zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 01-4.33 3.56zM16.36 14a16.5 16.5 0 000-4h3.38a8.2 8.2 0 010 4h-3.38z"/></svg>
             <select id="langSelect"></select>
         </label>
+      </div>
     </header>
 
     <main class="page">
         <section class="watch{% if is_video %} watch--video{% elif is_audio %} watch--audio{% else %} watch--file{% endif %}">
             {% if is_video or is_audio %}
+            <div class="ambient" id="ambient" aria-hidden="true"></div>
             <div class="stage" id="playerStage" data-state="loading">
+                <div class="shimmer" aria-hidden="true"></div>
                 <movi-player id="player" src="{{ stream_url }}" title="{{ file_name }}" playsinline
                     fallback="native" nohotkeys doubletap="false" spinnerdelay="999" theme="dark"></movi-player>
 
@@ -62,8 +67,9 @@
                 <div class="subs" id="subOverlay" aria-live="off"></div>
 
                 <div class="gesture" id="gestureLayer"></div>
-                <div class="ripple ripple--back" id="rippleBack"><span>-10</span></div>
-                <div class="ripple ripple--fwd" id="rippleFwd"><span>+10</span></div>
+                <div class="ripple ripple--back" id="rippleBack"><div class="chev"><i></i><i></i><i></i></div><span>-10</span></div>
+                <div class="ripple ripple--fwd" id="rippleFwd"><div class="chev"><i></i><i></i><i></i></div><span>+10</span></div>
+                <div class="osd" id="osd" aria-hidden="true"></div>
                 <div class="boost" id="boostBadge" hidden>
                     <svg viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
                     <span id="boostLabel">2x</span>
@@ -247,6 +253,19 @@
                 </span>
                 {% endif %}
             </div>
+
+            {% if is_video or is_audio %}
+            <div class="quick" id="quickBar">
+                <button class="quick-btn" id="qAudio" type="button">
+                    <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 00-9 9v7a2 2 0 002 2h2v-8H5v-1a7 7 0 0114 0v1h-2v8h2a2 2 0 002-2v-7a9 9 0 00-9-9z"/></svg>
+                    <span class="quick-txt"><small data-i18n="audio">Audio</small><b id="qAudioVal">—</b></span>
+                </button>
+                <button class="quick-btn" id="qSubs" type="button">
+                    <svg viewBox="0 0 24 24"><path d="M19 4H5a2 2 0 00-2 2v12a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zM5 12h8v2H5v-2zm14 6H5v-2h14v2zm0-4h-4v-2h4v2z"/></svg>
+                    <span class="quick-txt"><small data-i18n="subtitles">Subtitles</small><b id="qSubsVal">—</b></span>
+                </button>
+            </div>
+            {% endif %}
 
             <div class="actions">
                 <a class="btn btn--primary" id="downloadBtn" href="{{ download_url }}" download="{{ file_name }}">
