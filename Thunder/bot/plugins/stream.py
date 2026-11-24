@@ -88,7 +88,7 @@ def get_link_buttons(links, private: bool = False):
     if private and links.get('code'):
         rows.append([
             InlineKeyboardButton(tr('en', 'b_revoke'), callback_data=f"ml:d:{links['code']}:0",
-                                 style=enums.ButtonStyle.SUCCESS),
+                                 style=enums.ButtonStyle.DANGER),
         ])
     return InlineKeyboardMarkup(rows)
 

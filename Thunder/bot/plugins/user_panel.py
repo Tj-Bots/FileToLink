@@ -198,7 +198,7 @@ async def _detail_view(lang: str, doc: dict, page: int):
     else:
         text += tr(lang, "dead")
     rows.append([B(tr(lang, "b_extend"), callback_data=f"ml:e:{code}:{page}"),
-                 B(tr(lang, "b_delete"), callback_data=f"ml:d:{code}:{page}")])
+                 B(tr(lang, "b_delete"), callback_data=f"ml:d:{code}:{page}", style=ButtonStyle.DANGER)])
     rows.append([back_button(f"ml:p:{page}"), close_button()])
     return text, InlineKeyboardMarkup(rows)
 
@@ -214,8 +214,8 @@ def _extend_view(lang: str, doc: dict, page: int):
 def _delete_view(lang: str, doc: dict, page: int):
     code = doc["code"]
     return tr(lang, "del_q", name=_safe(doc["file_name"])), InlineKeyboardMarkup([[
-        B(tr(lang, "b_yes_del"), callback_data=f"ml:D:{code}:{page}"),
-        B(tr(lang, "b_cancel"), callback_data=f"ml:v:{code}:{page}"),
+        B(tr(lang, "b_yes_del"), callback_data=f"ml:D:{code}:{page}", style=ButtonStyle.DANGER),
+        B(tr(lang, "b_cancel"), callback_data=f"ml:v:{code}:{page}", style=ButtonStyle.PRIMARY),
     ]])
 
 
