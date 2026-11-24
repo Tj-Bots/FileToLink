@@ -75,16 +75,18 @@ def _preflight(repo: str, branch: str) -> bool | None:
 
     has_history = path.exists(".git")
     if not has_history:
-        # Without a checkout there is nothing to update in place, whether or not
-        # git happens to be installed. A tarball unpacked onto a host with git is
-        # the common case, and re-initialising a repository here would replace
-        # the deployment instead of updating it.
-        logger.info(
-            f"Self-update is not applicable in this deployment"
-            f"{f' ({detail})' if detail else ''}: no .git checkout to update. "
-            f"UPSTREAM_REPO is set but this deployment cannot update itself. "
-            f"Nothing has been changed.")
-        return None
+        if detail:
+            logger.info(
+                f"Self-update is not applicable in this deployment ({detail}): "
+                f"no .git checkout and no usable git. Nothing has been changed.")
+            return None
+        # Heroku and similar hosts deploy a slug without .git, and /restart
+        # updating from UPSTREAM_REPO is the documented way to update them. So a
+        # deployment with git but no checkout gets an empty repository to fetch
+        # into; the snapshot taken next still allows a full rollback.
+        if srun(["git", "init", "-q"]).returncode != 0:
+            logger.error("Could not create a git repository for the update; nothing has been changed.")
+            return False
 
     if detail:
         logger.error(

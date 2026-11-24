@@ -119,11 +119,10 @@ def test_config_recovered_when_a_previous_update_was_killed():
         force_rmtree(upstream_root)
 
 
-def test_no_git_checkout_is_not_updated_even_when_git_is_installed():
-    """A tarball deployment on a host that has git must be left alone.
+def test_no_git_checkout_is_updated_when_git_is_installed():
+    """A slug deployment (Heroku) has git but no .git: /restart must still update it.
 
-    The check is on the checkout, not on git: without a .git directory there is
-    nothing to update in place, and creating one would replace the deployment.
+    The checkout is created for the update; config.env survives it.
     """
     upstream_root, bare = make_upstream()
     deploy_root, app = make_deployment()
@@ -133,10 +132,10 @@ def test_no_git_checkout_is_not_updated_even_when_git_is_installed():
 
         result = run_update(app, bare)
 
-        assert result.returncode == 0, "not applicable is not an error"
-        assert not (app / ".git").exists(), "no repository may be created here"
+        assert result.returncode == 0
+        assert (app / ".git").exists()
         assert (app / "config.env").read_text().startswith("KEEP_ME")
-        assert not (app / "UPSTREAM_MARKER.txt").exists(), "nothing may be applied"
+        assert (app / "UPSTREAM_MARKER.txt").exists(), "the upstream code must be applied"
     finally:
         force_rmtree(deploy_root)
         force_rmtree(upstream_root)
