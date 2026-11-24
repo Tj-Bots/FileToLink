@@ -1,4 +1,4 @@
-/* Thunder watch page: page layout + a custom control layer over <movi-player>. */
+/* TJ watch page: page layout + a custom control layer over <movi-player>. */
 :root {
     --bg: #070910;
     --surface: rgba(255, 255, 255, .045);

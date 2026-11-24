@@ -1,4 +1,4 @@
-/* Thunder watch page.
+/* TJ watch page.
  * Page chrome (language, copy, share, open-in) plus a custom control layer
  * over <movi-player>, which does the demuxing/decoding (MKV, HEVC, audio
  * tracks, embedded subtitles). movi's own UI is left off; this file drives it.

@@ -15,7 +15,7 @@ from Thunder.utils.human_readable import humanbytes
 from Thunder.utils.logger import logger
 from Thunder.vars import Var
 
-SITE_NAME = "Thunder"
+SITE_NAME = "TJ File To Link"
 REPO_URL = "https://github.com/Tj-Bots/FileToLink"
 # Served by the bot itself (/assets/logo.png), so it cannot go missing from a CDN.
 LOGO_PATH = "assets/logo.png"

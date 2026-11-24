@@ -2,7 +2,7 @@
   <img src="Thunder/assets/logo.png" alt="TJ Logo" width="120">
 </p>
 
-<h1 align="center">⚡ Thunder · File to Link</h1>
+<h1 align="center">⚡ TJ File To Link</h1>
 
 <p align="center">
   <b>Turn any Telegram file into a fast watch link and a direct download link.</b><br>
@@ -102,7 +102,7 @@ Copy `config_sample.env` to `config.env` and fill in your values.
 | `BIN_CHANNEL` | Storage channel ID | `-1001234567890` |
 | `OWNER_ID` | Owner user ID | `12345678` |
 | `DATABASE_URL` | MongoDB connection | `mongodb+srv://...` |
-| `FQDN` | Domain/IP address | `f2l.thunder.com` |
+| `FQDN` | Domain/IP address | `f2l.example.com` |
 | `HAS_SSL` | HTTPS enabled | `True` or `False` |
 | `PORT` | Server port | `8080` |
 | `NO_PORT` | Hide port in URLs | `True` or `False` |
@@ -230,7 +230,7 @@ URL_SHORTENER_SITE=shortener.example.com
 
 ### Rate Limiting System
 
-Thunder implements a sophisticated multi-tier rate limiting system designed for high-performance file sharing:
+The bot implements a multi-tier rate limiting system designed for high-performance file sharing:
 
 #### **Priority Queue Architecture**
 
@@ -262,7 +262,7 @@ Features include download/upload speeds, latency measurements, and shareable res
 
 ## Deployment Guide
 
-This section covers the complete setup process for deploying Thunder, from prerequisites to production deployment.
+This section covers the complete setup process for deploying the bot, from prerequisites to production deployment.
 
 ### Prerequisites
 
@@ -290,9 +290,9 @@ cp config_sample.env config.env
 nano config.env  # Edit your settings
 
 # 3. Build and run (the config is mounted — it is not baked into the image)
-docker build -t thunder .
-docker run -d --name thunder -p 8080:8080 \
-  -v "$PWD/config.env:/app/config.env:ro" thunder
+docker build -t tj-f2l .
+docker run -d --name tj-f2l -p 8080:8080 \
+  -v "$PWD/config.env:/app/config.env
 ```
 
 (PowerShell: `-v "${PWD}\config.env:/app/config.env:ro"`.)
@@ -309,8 +309,8 @@ chmod 644 config.env
 finish, since `docker stop` defaults to 10s:
 
 ```bash
-docker run -d --stop-timeout 30 --name thunder -p 8080:8080 \
-  -v "$PWD/config.env:/app/config.env:ro" thunder
+docker run -d --stop-timeout 30 --name tj-f2l -p 8080:8080 \
+  -v "$PWD/config.env:/app/config.env
 ```
 
 The image runs as unprivileged user `10001` without a build toolchain. Env files are
@@ -325,8 +325,8 @@ Docker's `--env-file` passes values verbatim, so inline comments and quotes in
 using `python-dotenv`:
 
 ```bash
-python3 -c "from dotenv import dotenv_values as d; [print(f'{k}={v}') for k, v in d('config.env').items()]" > /tmp/thunder-docker.env
-docker run -d --name thunder -p 8080:8080 --env-file /tmp/thunder-docker.env thunder
+python3 -c "from dotenv import dotenv_values as d; [print(f'{k}={v}') for k, v in d('config.env').items()]" > /tmp/tj-f2l-docker.env
+docker run -d --name tj-f2l -p 8080:8080 --env-file /tmp/tj-f2l-docker.env tj-f2l
 ```
 
 Requires `python-dotenv` locally (`pip install python-dotenv`); mounting `config.env`
@@ -358,7 +358,7 @@ nano config.env
 python -m Thunder
 ```
 
-> **Tip:** Start with the essential configuration to get Thunder running, then add optional features as needed.
+> **Tip:** Start with the essential configuration to get the bot running, then add optional features as needed.
 
 </details>
 
@@ -366,7 +366,7 @@ python -m Thunder
 
 ### Deploy to Koyeb
 
-[![Deploy to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=git&repository=github.com/Tj-Bots/FileToLink&branch=new&builder=dockerfile&name=thunder&ports=8080;http;/&env[API_ID]=&env[API_HASH]=&env[BOT_TOKEN]=&env[BIN_CHANNEL]=&env[OWNER_ID]=&env[DATABASE_URL]=&env[FQDN]=)
+[![Deploy to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=git&repository=github.com/Tj-Bots/FileToLink&branch=new&builder=dockerfile&name=tj-f2l&ports=8080;http;/&env[API_ID]=&env[API_HASH]=&env[BOT_TOKEN]=&env[BIN_CHANNEL]=&env[OWNER_ID]=&env[DATABASE_URL]=&env[FQDN]=)
 
 After deployment, to add any additional environment variables, use the Koyeb dashboard under **Settings** → **Environment Variables**.
 
@@ -433,7 +433,7 @@ This guide will help you set up a secure reverse proxy using **NGINX** for your 
 
 - A **VPS or server** running Ubuntu/Debian with NGINX installed.
 - Your **file streaming bot** running on a local port (e.g., `8080`).
-- A **subdomain** (e.g., `f2l.thunder.com`) set up in **Cloudflare**.
+- A **subdomain** (e.g., `f2l.example.com`) set up in **Cloudflare**.
 - **Cloudflare Origin Certificate** files: `cert.pem` and `key.key`.
 
 ---
@@ -450,27 +450,27 @@ This guide will help you set up a secure reverse proxy using **NGINX** for your 
 Create a folder for your certificates and place `cert.pem` and `key.key` inside. Secure the private key.
 
 ```bash
-sudo mkdir -p /etc/ssl/cloudflare/f2l.thunder.com
+sudo mkdir -p /etc/ssl/cloudflare/f2l.example.com
 # Move/copy your cert.pem and key.key files into this directory
-sudo chmod 600 /etc/ssl/cloudflare/f2l.thunder.com/key.key
-sudo chmod 644 /etc/ssl/cloudflare/f2l.thunder.com/cert.pem
+sudo chmod 600 /etc/ssl/cloudflare/f2l.example.com/key.key
+sudo chmod 644 /etc/ssl/cloudflare/f2l.example.com/cert.pem
 ```
 
 ---
 
 #### 🛠️ Step 3: Create NGINX Configuration
 
-Create a new file at `/etc/nginx/sites-available/f2l.thunder.conf` and paste the following, replacing `f2l.thunder.com` and `8080` with your values.
+Create a new file at `/etc/nginx/sites-available/f2l.example.conf` and paste the following, replacing `f2l.example.com` and `8080` with your values.
 
 ```nginx
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
-    server_name f2l.thunder.com;
+    server_name f2l.example.com;
 
     # SSL Configuration
-    ssl_certificate     /etc/ssl/cloudflare/f2l.thunder.com/cert.pem;
-    ssl_certificate_key /etc/ssl/cloudflare/f2l.thunder.com/key.key;
+    ssl_certificate     /etc/ssl/cloudflare/f2l.example.com/cert.pem;
+    ssl_certificate_key /etc/ssl/cloudflare/f2l.example.com/key.key;
 
     # Basic security
     add_header X-Frame-Options DENY;
@@ -495,7 +495,7 @@ server {
 server {
     listen 80;
     listen [::]:80;
-    server_name f2l.thunder.com;
+    server_name f2l.example.com;
     return 301 https://$host$request_uri;
 }
 ```
@@ -507,7 +507,7 @@ server {
 Enable the configuration, test it, and reload NGINX.
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/f2l.thunder.conf /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/f2l.example.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -532,7 +532,7 @@ A: This is usually a configuration issue. Please check the following:
 **Q: What do I use for the `FQDN` variable?**
 A: It's the public URL or IP address of your bot.
 
-- **With a Domain**: Use your subdomain (e.g., `f2l.thunder.com`).
+- **With a Domain**: Use your subdomain (e.g., `f2l.example.com`).
 - **On Koyeb/Render/Heroku**: Use the public URL provided by the platform.
 - **On a VPS**: Use your server's public IP address.
 
@@ -610,7 +610,7 @@ Licensed under the [Apache License 2.0](LICENSE). See the `LICENSE` file for det
 
 ## Credits
 
-Thunder started as [fyaz05/FileToLink](https://github.com/fyaz05/FileToLink) and has since been reworked by [@TJ_Bots](https://t.me/TJ_Bots): a new watch page, personal links, and a new bot interface. The old look of the bot owes a lot to [FileStreamBot](https://github.com/avipatilpro/FileStreamBot).
+Based on [fyaz05/FileToLink](https://github.com/fyaz05/FileToLink), reworked by [@TJ_Bots](https://t.me/TJ_Bots): a new watch page, personal links, and a new bot interface. The old look of the bot owes a lot to [FileStreamBot](https://github.com/avipatilpro/FileStreamBot).
 
 Built on:
 

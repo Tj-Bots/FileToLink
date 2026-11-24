@@ -151,55 +151,6 @@ MSG_BUTTON_BACK = "🔙 Back"
 
 # COMMAND RESPONSES (User-facing)
 
-# Superseded by Thunder/utils/bot_i18n.py (per-user language); kept for reference.
-MSG_WELCOME = (
-    "⚡ **Hey {user_name}, welcome to Thunder!**\n\n"
-    "> Send me any file and I'll turn it into a **direct download link** "
-    "and a **watch-online page**, in seconds.\n\n"
-    "**What you get**\n"
-    "🎬 Watch in the browser, with audio tracks and subtitles\n"
-    "🚀 Fast, resumable downloads of any size\n"
-    "⏳ Links that last forever, or only as long as you choose\n"
-    "🗂 A list of your links to extend or delete at any time\n\n"
-    "👇 **Send a file to get started.**"
-)
-
-MSG_HELP = (
-    "📖 **How to use Thunder**\n\n"
-    "**💬 In private**\n"
-    "> Send or forward me any file: video, audio, document or photo. "
-    "I reply with a watch link and a download link.\n\n"
-    "**👥 In groups**\n"
-    "> Reply to a file with `/link`.\n"
-    "> For several files in a row, reply to the **first** one with `/link 5` "
-    "(up to {max_files}). I need to be an admin there.\n\n"
-    "**⏳ Link lifetime**\n"
-    "> In /settings choose how long new links work: 24 hours, 7 days, "
-    "30 days or forever.\n\n"
-    "**🗂 Your links**\n"
-    "> /mylinks lists everything you created. Open a link to extend it or "
-    "delete it, so it stops working right away.\n\n"
-    "**⌨️ Commands**\n"
-    "> /start · welcome\n"
-    "> /settings · your preferences\n"
-    "> /mylinks · manage your links\n"
-    "> /link · (groups) make links\n"
-    "> /ping · is the bot online\n"
-    "> /about · about the bot"
-)
-
-MSG_ABOUT = (
-    "⚡ **Thunder File to Link**\n\n"
-    "> Turns Telegram files into fast links you can watch or download "
-    "anywhere, without saving them to your phone first.\n\n"
-    "**Under the hood**\n"
-    "🎬 In-browser player: MKV, HEVC, multiple audio tracks, subtitles\n"
-    "🚀 Parallel streaming straight from Telegram\n"
-    "🌍 Watch page in 17 languages\n"
-    "🔐 Personal links you can expire or revoke\n\n"
-    "💙 Made by @TJ_Bots. If the bot helps you, share it with a friend!"
-)
-
 # Ping
 MSG_PING_START = "🛰️ **Pinging...** Please wait."
 MSG_PING_RESPONSE = (

@@ -48,7 +48,7 @@ _EN = {
     ),
     "about": (
         "⚜️ **About me**\n\n"
-        "> ✦ **Name :** Thunder File to Link\n"
+        "> ✦ **Name :** TJ File To Link\n"
         "> ✦ **Version :** `{version}`\n"
         "> ✦ **Language :** [Python](https://www.python.org)\n"
         "> ✦ **Library :** [wzgram](https://github.com/rjriajul/wzgram)\n"
