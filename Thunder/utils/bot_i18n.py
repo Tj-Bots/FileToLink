@@ -87,14 +87,15 @@ _EN = {
     "b_clear": "🧹 Clear expired",
     "d": "{n}d", "h": "{n}h", "m": "{n}m",
     "detail": (
-        "🔗 **Link details**\n\n"
+        "--__**Link Details**__--\n\n"
         "> 📂 **File name :** `{name}`\n"
         "> 📦 **File size :** `{size}`\n"
-        "> ⏳ **Status :** `{status}`\n"
+        "> ⏳ **Valid for :** `{status}`\n"
         "> 📅 **Created on :** `{created}`"
     ),
-    "st_forever": "Forever ♾", "st_left": "{left} left", "st_expired": "Expired ⛔",
-    "dead": "⚠️ **This link no longer works.** Extend it to turn it back on.",
+    "detail_links": "\n\n📥 **Download :**\n> {download}\n\n🖥 **Watch :**\n> {watch}",
+    "st_forever": "Forever ♾", "st_left": "{left} left · until {when} UTC", "st_expired": "Expired ⛔",
+    "dead": "\n\n⚠️ **This link no longer works.**\n> Extend it to turn it back on.",
     "b_extend": "⏳ Extend",
     "ext_title": "⏳ **Extend link**\n\n> From now on, keep this link working for:",
     "extended": "✅ Extended",

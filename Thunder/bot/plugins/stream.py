@@ -87,7 +87,6 @@ def get_link_buttons(links, private: bool = False):
     # Revoking edits this message, so offer it only where nobody else reads it.
     if private and links.get('code'):
         rows.append([
-            InlineKeyboardButton(tr('en', 'b_copy'), copy_text=links['online_link'], style=enums.ButtonStyle.SUCCESS),
             InlineKeyboardButton(tr('en', 'b_revoke'), callback_data=f"ml:d:{links['code']}:0",
                                  style=enums.ButtonStyle.SUCCESS),
         ])

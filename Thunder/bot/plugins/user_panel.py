@@ -10,6 +10,7 @@ import datetime
 import math
 
 from pyrogram import Client, filters
+from pyrogram.enums import ButtonStyle
 from pyrogram.errors import FloodWait, MessageNotModified
 from pyrogram.types import (CallbackQuery, InlineKeyboardButton,
                             InlineKeyboardMarkup, Message)
@@ -153,7 +154,8 @@ def _status(lang: str, doc: dict) -> str:
         return tr(lang, "st_expired")
     if not doc.get("expires_at"):
         return tr(lang, "st_forever")
-    return tr(lang, "st_left", left=_left(lang, doc["expires_at"] - _now()))
+    return tr(lang, "st_left", left=_left(lang, doc["expires_at"] - _now()),
+              when=doc["expires_at"].strftime("%d.%m.%Y %H:%M"))
 
 
 async def _list_view(lang: str, uid: int, page: int):
@@ -180,6 +182,7 @@ async def _list_view(lang: str, uid: int, page: int):
 
 
 async def _detail_view(lang: str, doc: dict, page: int):
+    """The same card as the message a new link arrives in, plus extend / revoke."""
     live = user_links.link_state(doc) == "ok"
     text = tr(lang, "detail", name=_safe(doc["file_name"]), size=humanbytes(doc.get("file_size") or 0),
               status=_status(lang, doc), created=doc["created_at"].strftime("%d.%m.%Y"))
@@ -189,11 +192,11 @@ async def _detail_view(lang: str, doc: dict, page: int):
         download_path, stream_path = user_links.link_paths(doc)
         links = await _build_links(download_path=download_path, stream_path=stream_path,
                                    media_name=doc["file_name"], media_size="", shortener=False)
-        rows.append([B(tr(lang, "b_watch"), url=links["stream_link"]),
-                     B(tr(lang, "b_download"), url=links["online_link"])])
-        rows.append([B(tr(lang, "b_copy"), copy_text=links["online_link"])])
+        text += tr(lang, "detail_links", download=links["online_link"], watch=links["stream_link"])
+        rows.append([B(tr(lang, "b_watch"), url=links["stream_link"], style=ButtonStyle.SUCCESS),
+                     B(tr(lang, "b_download"), url=links["online_link"], style=ButtonStyle.SUCCESS)])
     else:
-        text += "\n\n" + tr(lang, "dead")
+        text += tr(lang, "dead")
     rows.append([B(tr(lang, "b_extend"), callback_data=f"ml:e:{code}:{page}"),
                  B(tr(lang, "b_delete"), callback_data=f"ml:d:{code}:{page}")])
     rows.append([back_button(f"ml:p:{page}"), close_button()])
