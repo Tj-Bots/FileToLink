@@ -41,18 +41,47 @@
         document.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
         langListeners.forEach((fn) => fn());
     };
-    const langSelect = $('langSelect');
-    if (langSelect) {
+    // Language menu: a code badge + native name, opening a grid of every language.
+    const langBtn = $('langBtn');
+    const langMenu = $('langMenu');
+    const renderLangButton = () => {
+        if (!langBtn) return;
+        $('langCode').textContent = lang.toUpperCase();
+        $('langName').textContent = I18N.langs[lang]?._name || lang;
+    };
+    const setLangMenu = (open) => {
+        if (!langMenu) return;
+        langMenu.hidden = !open;
+        langBtn.setAttribute('aria-expanded', String(open));
+        if (open) langMenu.querySelector('.on')?.scrollIntoView({ block: 'nearest' });
+    };
+    if (langBtn && langMenu) {
         Object.entries(I18N.langs).forEach(([code, dict]) => {
-            const o = document.createElement('option');
-            o.value = code; o.textContent = dict._name || code;
-            langSelect.appendChild(o);
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'lang-item';
+            item.setAttribute('role', 'option');
+            item.dataset.lang = code;
+            const badge = document.createElement('span'); badge.className = 'lang-code'; badge.textContent = code.toUpperCase();
+            const name = document.createElement('span'); name.className = 'lang-item-name'; name.textContent = dict._name || code;
+            item.append(badge, name);
+            item.addEventListener('click', () => {
+                lang = code;
+                try { localStorage.setItem(LANG_KEY, lang); } catch { /* ignore */ }
+                applyLang();
+                setLangMenu(false);
+            });
+            langMenu.appendChild(item);
         });
-        langSelect.value = lang;
-        langSelect.addEventListener('change', () => {
-            lang = langSelect.value;
-            try { localStorage.setItem(LANG_KEY, lang); } catch { /* ignore */ }
-            applyLang();
+        langBtn.addEventListener('click', (e) => { e.stopPropagation(); setLangMenu(langMenu.hidden); });
+        document.addEventListener('click', (e) => { if (!e.target.closest('#langWrap')) setLangMenu(false); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setLangMenu(false); });
+        langListeners.push(() => {
+            renderLangButton();
+            langMenu.querySelectorAll('.lang-item').forEach((b) => {
+                b.classList.toggle('on', b.dataset.lang === lang);
+                b.setAttribute('aria-selected', String(b.dataset.lang === lang));
+            });
         });
     }
     applyLang();
@@ -520,7 +549,6 @@
     ui.tracks.addEventListener('click', () => { renderTracks(); openSheet('tracksSheet'); });
     ['qAudio', 'qSubs'].forEach((id) => $(id)?.addEventListener('click', () => {
         renderTracks(); openSheet('tracksSheet');
-        stage.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }));
     ui.settings.addEventListener('click', () => { renderSettings(); openSheet('settingsSheet'); });
     ui.speedBtn.addEventListener('click', () => { renderSettings(); openSheet('settingsSheet'); });

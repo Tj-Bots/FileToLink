@@ -45,10 +45,14 @@
             <img src="{{ logo_url }}" alt="" width="32" height="32">
             <span>TJ Bots</span>
         </a>
-        <label class="lang-picker" data-i18n-aria="language" aria-label="Language">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm6.93 6h-2.95a15.7 15.7 0 00-1.38-3.56A8.03 8.03 0 0118.93 8zM12 4.04c.83 1.2 1.480 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14a8.2 8.2 0 010-4h3.38a16.5 16.5 0 000 4H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A8 8 0 015.08 16zm2.95-8H5.08a8 8 0 014.33-3.56A15.7 15.7 0 008.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.960h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66a14.7 14.7 0 010-4h4.68a14.7 14.7 0 010 4zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 01-4.33 3.56zM16.36 14a16.5 16.5 0 000-4h3.38a8.2 8.2 0 010 4h-3.38z"/></svg>
-            <select id="langSelect"></select>
-        </label>
+        <div class="lang" id="langWrap">
+            <button class="lang-btn" id="langBtn" type="button" aria-haspopup="listbox" aria-expanded="false" data-i18n-aria="language" aria-label="Language">
+                <span class="lang-code" id="langCode">EN</span>
+                <span class="lang-name" id="langName">English</span>
+                <svg class="lang-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+            </button>
+            <div class="lang-menu" id="langMenu" role="listbox" hidden></div>
+        </div>
       </div>
     </header>
 
