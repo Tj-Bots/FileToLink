@@ -1,1 +1,1 @@
-web: python -m Thunder
+web: bash thunder.sh

@@ -2,6 +2,7 @@ import re
 import tarfile
 import urllib.request
 from fnmatch import fnmatch
+from importlib import metadata as importlib_metadata
 from os import chmod, environ, listdir, makedirs, path, remove, replace, rmdir, walk
 from pathlib import Path, PurePath
 from shutil import copy2, copytree, ignore_patterns, rmtree
@@ -213,6 +214,22 @@ def _apply_upstream(repo: str, branch: str) -> bool:
     return True
 
 
+def _has_package(name: str) -> bool:
+    try:
+        importlib_metadata.version(name)
+        return True
+    except importlib_metadata.PackageNotFoundError:
+        return False
+
+
+def _requirement_listed(name: str) -> bool:
+    try:
+        with open("requirements.txt", encoding="utf-8") as f:
+            return any(line.strip().lower().startswith(name) for line in f)
+    except OSError:
+        return False
+
+
 def _install_requirements() -> bool:
     # A package that will not build here is reported, never a rollback.
     if not path.exists("requirements.txt"):
@@ -226,6 +243,13 @@ def _install_requirements() -> bool:
         [executable, "-m", "pip", "install", "-q", "-r", "requirements.txt"],
         ["uv", "pip", "install", "--python", executable, "-q", "-r", "requirements.txt"],
     )
+    # An old deployment still has pyrotgfork (and tgcrypto), which install the same
+    # `pyrogram` package as wzgram. Left in place they overwrite each other, so the
+    # old library is removed first and wzgram is laid down again afterwards.
+    migrating = _has_package("pyrotgfork") and _requirement_listed("wzgram")
+    if migrating:
+        logger.info("Replacing pyrotgfork with wzgram.")
+        srun([executable, "-m", "pip", "uninstall", "-y", "-q", "pyrotgfork", "tgcrypto"], capture_output=True)
     last_error = ""
     for command in attempts:
         try:
@@ -234,6 +258,9 @@ def _install_requirements() -> bool:
             last_error = f"could not run {command[0]}: {e}"
             continue
         if result.returncode == 0:
+            if migrating:
+                srun([executable, "-m", "pip", "install", "-q", "--force-reinstall", "--no-deps", "wzgram"],
+                     capture_output=True)
             return True
         tail = (result.stderr or b"").decode("utf-8", "replace").strip().splitlines()
         last_error = tail[-1] if tail else f"{command[0]} exited {result.returncode}"
@@ -469,6 +496,11 @@ def _archive_update(repo: str, branch: str) -> bool:
             ok = False
         else:
             changed = len(written) + len(created)
+            if changed == 0:
+                # Every restart runs this, and a web dyno must bind its port within
+                # a minute of starting: skip the slow install and import probe.
+                logger.info(f"Already up to date with {owner}/{name}@{branch}.")
+                return True
             logger.info(f"Applied {changed} changed file(s) from {owner}/{name}@{branch}.")
             ok = _install_requirements() and _validate()
 

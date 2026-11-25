@@ -13,7 +13,10 @@ REPO = Path(__file__).resolve().parent.parent
 def test_procfile_declares_the_web_process():
     procfile = (REPO / "Procfile").read_text(encoding="utf-8")
     assert procfile.startswith("web:"), "Heroku's buildpack needs a web process type"
-    assert "python -m Thunder" in procfile, "the app's only entry point"
+    # thunder.sh updates from the repository, then execs `python -m Thunder`: this
+    # is what makes Heroku's daily dyno restart pick up the latest code.
+    assert "thunder.sh" in procfile, "every dyno start must go through the updater"
+    assert "-m Thunder" in (REPO / "thunder.sh").read_text(encoding="utf-8")
 
 
 def test_platform_files_consumed_at_deploy_time_still_exist():

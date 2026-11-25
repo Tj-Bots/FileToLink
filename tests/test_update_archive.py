@@ -84,3 +84,16 @@ def test_every_spelling_of_this_repo_is_recognised(url):
 
 def test_other_repos_are_not_this_one():
     assert not update._is_default_repo("https://github.com/fyaz05/FileToLink")
+
+
+def test_nothing_changed_skips_the_slow_steps(monkeypatch, slug):
+    """Every restart runs the updater; an unchanged tree must not reinstall or re-probe."""
+    (slug / "Thunder" / "a.py").write_text("same\n")
+    (slug / "update.py").write_text("same\n")
+    calls = []
+    monkeypatch.setattr(update, "_install_requirements", lambda: calls.append("install") or True)
+    monkeypatch.setattr(update, "_validate", lambda: calls.append("validate") or True)
+    _serve(monkeypatch, _tarball({"update.py": "same\n", "Thunder/a.py": "same\n"}))
+
+    assert update._archive_update("https://github.com/Tj-Bots/FileToLink", "new") is True
+    assert calls == []
